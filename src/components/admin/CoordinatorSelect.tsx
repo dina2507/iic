@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Coordinator {
-  user_id: string;
+  id: string;
   name: string;
   designation: string;
 }
@@ -48,16 +48,15 @@ export function CoordinatorSelect({
     const fetchAllCoordinators = async () => {
       setIsLoading(true);
       const table = memberType === "faculty" ? "faculty_members" : "student_members";
-      const selectFields = memberType === "faculty" ? "user_id, name, designation" : "user_id, name, role";
+      const selectFields = memberType === "faculty" ? "id, name, designation" : "id, name, role";
       
       const { data, error } = await supabase
         .from(table as any)
-        .select(selectFields)
-        .not("user_id", "is", null);
+        .select(selectFields);
 
       if (!error && data) {
         const formattedData = data.map((d: any) => ({
-          user_id: d.user_id,
+          id: d.id,
           name: d.name,
           designation: memberType === "faculty" ? d.designation : d.role,
         }));
@@ -65,7 +64,7 @@ export function CoordinatorSelect({
         
         // Sync selected coordinators
         if (values.length > 0) {
-          setSelectedCoordinators(formattedData.filter(c => values.includes(c.user_id)));
+          setSelectedCoordinators(formattedData.filter(c => values.includes(c.id)));
         }
       }
       setIsLoading(false);
@@ -80,10 +79,10 @@ export function CoordinatorSelect({
   );
 
   const toggleCoordinator = (coordinator: Coordinator) => {
-    const isSelected = values.includes(coordinator.user_id);
+    const isSelected = values.includes(coordinator.id);
     const newValues = isSelected 
-      ? values.filter(v => v !== coordinator.user_id)
-      : [...values, coordinator.user_id];
+      ? values.filter(v => v !== coordinator.id)
+      : [...values, coordinator.id];
     
     onChange(newValues);
   };
@@ -105,11 +104,11 @@ export function CoordinatorSelect({
           {selectedCoordinators.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {selectedCoordinators.map(c => (
-                <Badge key={c.user_id} variant="secondary" className="mr-1 mb-1">
+                <Badge key={c.id} variant="secondary" className="mr-1 mb-1">
                   {c.name}
                   <button
                     className="ml-1 hover:bg-muted rounded-full"
-                    onClick={(e) => removeCoordinator(c.user_id, e)}
+                    onClick={(e) => removeCoordinator(c.id, e)}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -142,11 +141,11 @@ export function CoordinatorSelect({
             </CommandEmpty>
             <CommandGroup>
               {filteredCoordinators.map((coordinator) => {
-                const isSelected = values.includes(coordinator.user_id);
+                const isSelected = values.includes(coordinator.id);
                 return (
                   <CommandItem
-                    key={coordinator.user_id}
-                    value={coordinator.user_id}
+                    key={coordinator.id}
+                    value={coordinator.id}
                     onSelect={() => toggleCoordinator(coordinator)}
                   >
                     <div className="flex items-center w-full">
