@@ -25,7 +25,7 @@ const studentMemberSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be at most 100 characters"),
   role: z.string().min(2, "Role must be at least 2 characters").max(100, "Role must be at most 100 characters"),
   domain: z.string().optional(),
-  domain_role: z.enum(["head", "coordinator", "member"], { required_error: "Select a designation" }),
+  domain_role: z.enum(["head", "coordinator", "member"], { required_error: "Select a role" }),
   phone_number: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
   about: z.string().max(500, "About must be 500 characters or fewer").optional().or(z.literal("")),
   image_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
@@ -238,7 +238,7 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="role">Role *</Label>
+          <Label htmlFor="role">Title *</Label>
           <Input
             id="role"
             {...form.register("role")}
@@ -273,13 +273,13 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="domain_role">Designation</Label>
+          <Label htmlFor="domain_role">Role</Label>
           <Select
             value={form.watch("domain_role")}
             onValueChange={(value: "head" | "coordinator" | "member") => form.setValue("domain_role", value)}
           >
             <SelectTrigger id="domain_role">
-              <SelectValue placeholder="Select designation" />
+              <SelectValue placeholder="Select role" />
             </SelectTrigger>
             <SelectContent>
               {designationOptions.map((option) => (

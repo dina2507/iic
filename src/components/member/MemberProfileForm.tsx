@@ -325,7 +325,7 @@ export function MemberProfileForm() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
+            <Label htmlFor="role">Title</Label>
             <Input id="role" {...form.register("role")} placeholder="e.g., Member, Domain Lead" />
             <p className="text-xs text-muted-foreground">
               Your head/coordinator title is assigned by an admin.
