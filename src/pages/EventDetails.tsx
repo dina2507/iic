@@ -75,12 +75,12 @@ const EventDetails = () => {
   const { data: registrationCount } = useQuery({
     queryKey: ['event-registration-count', id],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', id);
+      // Use the SECURITY DEFINER RPC: RLS hides registration rows from
+      // non-staff, so a direct count would (wrongly) return 0 for visitors.
+      const { data, error } = await supabase
+        .rpc('get_event_registration_count', { p_event_id: id });
       if (error) throw error;
-      return count || 0;
+      return data ?? 0;
     },
     enabled: !!id,
   });
@@ -219,8 +219,8 @@ const EventDetails = () => {
               {event.eligibility === 'internal' ? 'VIT Only' : event.eligibility === 'external' ? 'External' : 'Open for All'}
             </Badge>
             {event.mode && (
-              <Badge className={`text-white border-0 text-sm px-4 py-1 ${event.mode === 'online' ? 'bg-green-500' : 'bg-blue-500'}`}>
-                {event.mode === 'online' ? 'Online' : 'Offline'}
+              <Badge className={`text-white border-0 text-sm px-4 py-1 ${event.mode === 'online' ? 'bg-green-500' : event.mode === 'hybrid' ? 'bg-purple-500' : 'bg-blue-500'}`}>
+                {event.mode === 'online' ? 'Online' : event.mode === 'hybrid' ? 'Hybrid' : 'Offline'}
               </Badge>
             )}
             {isPastEvent && (

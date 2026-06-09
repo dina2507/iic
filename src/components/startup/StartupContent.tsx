@@ -392,9 +392,10 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
             )}
           </div>
           <div>
-            <input
+            <textarea
               aria-label="Reason to join"
               placeholder="Why do you want to join?"
+              rows={3}
               {...joinForm.register("reason")}
             />
             {joinForm.formState.errors.reason && (

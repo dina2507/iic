@@ -91,7 +91,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user, loading: authLoading, signOut, isStudentMember } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -341,12 +341,10 @@ export default function Dashboard() {
                     {getInitials(profile?.full_name)}
                   </AvatarFallback>
                 </Avatar>
-                {isStudentMember && (
-                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity" title="Upload Avatar">
-                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} disabled={isUploading} />
-                    {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
-                  </label>
-                )}
+                <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity" title="Upload Avatar">
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} disabled={isUploading} />
+                  {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
+                </label>
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{profile?.full_name || "User"}</h1>

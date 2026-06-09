@@ -138,17 +138,17 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
   const uploadImage = async (file: File): Promise<string | null> => {
     setIsUploading(true);
     const fileExt = file.name.split(".").pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `events/${fileName}`;
 
     try {
       const { error: uploadError } = await supabase.storage
-        .from("events")
+        .from("event-images")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage.from("events").getPublicUrl(filePath);
+      const { data } = supabase.storage.from("event-images").getPublicUrl(filePath);
       return data.publicUrl;
     } catch (error: any) {
       toast({
