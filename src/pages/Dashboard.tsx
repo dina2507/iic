@@ -206,7 +206,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("events")
         .select('*')
-        .or(`faculty_coordinator_id.eq.${user.id},student_coordinator_id.eq.${user.id}`)
+        .or(`faculty_coordinator_ids.cs.{${user.id}},student_coordinator_ids.cs.{${user.id}}`)
         .order("date", { ascending: false });
       if (error) throw error;
       return data;

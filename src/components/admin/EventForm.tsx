@@ -26,8 +26,8 @@ const eventSchema = z.object({
   is_featured: z.boolean(),
   is_active: z.boolean(),
   display_order: z.number().min(0),
-  faculty_coordinator_id: z.string().optional().nullable(),
-  student_coordinator_id: z.string().optional().nullable(),
+  faculty_coordinator_ids: z.array(z.string()).optional().default([]),
+  student_coordinator_ids: z.array(z.string()).optional().default([]),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -47,8 +47,8 @@ interface EventFormProps {
     is_featured: boolean | null;
     is_active: boolean | null;
     display_order: number | null;
-    faculty_coordinator_id: string | null;
-    student_coordinator_id: string | null;
+    faculty_coordinator_ids: string[] | null;
+    student_coordinator_ids: string[] | null;
   };
   onSuccess: () => void;
   onCancel: () => void;
@@ -108,24 +108,25 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
       is_featured: event?.is_featured ?? true,
       is_active: event?.is_active ?? true,
       display_order: event?.display_order ?? 0,
-      faculty_coordinator_id: event?.faculty_coordinator_id || null,
-      student_coordinator_id: event?.student_coordinator_id || null,
+      faculty_coordinator_ids: event?.faculty_coordinator_ids || [],
+      student_coordinator_ids: event?.student_coordinator_ids || [],
     },
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Image must be less than 5MB",
+          description: "Image must be less than 2MB",
           variant: "destructive",
         });
         return;
       }
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
     }
   };
 
@@ -134,41 +135,47 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
     setImagePreview(null);
   };
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return event?.image_url || null;
-
+  const uploadImage = async (file: File): Promise<string | null> => {
     setIsUploading(true);
-    const fileExt = imageFile.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("event-images")
-      .upload(fileName, imageFile);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("events")
+        .upload(filePath, file);
 
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("events").getPublicUrl(filePath);
+      return data.publicUrl;
+    } catch (error: any) {
       toast({
-        title: "Upload failed",
-        description: uploadError.message,
+        title: "Error uploading image",
+        description: error.message,
         variant: "destructive",
       });
-      setIsUploading(false);
       return null;
+    } finally {
+      setIsUploading(false);
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("event-images")
-      .getPublicUrl(fileName);
-
-    setIsUploading(false);
-    return publicUrl;
   };
 
   const onSubmit = async (data: EventFormData) => {
     setIsLoading(true);
-
     try {
-      const imageUrl = await uploadImage();
+      let imageUrl = event?.image_url || null;
+
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(imageFile);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        } else {
+          setIsLoading(false);
+          return;
+        }
+      }
 
       const eventData = {
         title: data.title,
@@ -183,8 +190,8 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
         is_featured: data.is_featured,
         is_active: data.is_active,
         display_order: data.display_order,
-        faculty_coordinator_id: data.faculty_coordinator_id || null,
-        student_coordinator_id: data.student_coordinator_id || null,
+        faculty_coordinator_ids: data.faculty_coordinator_ids?.length ? data.faculty_coordinator_ids : null,
+        student_coordinator_ids: data.student_coordinator_ids?.length ? data.student_coordinator_ids : null,
       };
 
       let eventId = event?.id;
@@ -376,21 +383,21 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
       {/* Coordinators */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Faculty Coordinator</Label>
+          <Label>Faculty Coordinators</Label>
           <CoordinatorSelect
             memberType="faculty"
-            value={form.watch("faculty_coordinator_id") || ""}
-            onChange={(val) => form.setValue("faculty_coordinator_id", val || null, { shouldDirty: true })}
-            placeholder="Assign Faculty Coordinator..."
+            values={form.watch("faculty_coordinator_ids") || []}
+            onChange={(vals) => form.setValue("faculty_coordinator_ids", vals, { shouldDirty: true })}
+            placeholder="Assign Faculty Coordinators..."
           />
         </div>
         <div className="space-y-2">
-          <Label>Student Coordinator</Label>
+          <Label>Student Coordinators</Label>
           <CoordinatorSelect
             memberType="student"
-            value={form.watch("student_coordinator_id") || ""}
-            onChange={(val) => form.setValue("student_coordinator_id", val || null, { shouldDirty: true })}
-            placeholder="Assign Student Coordinator..."
+            values={form.watch("student_coordinator_ids") || []}
+            onChange={(vals) => form.setValue("student_coordinator_ids", vals, { shouldDirty: true })}
+            placeholder="Assign Student Coordinators..."
           />
         </div>
       </div>

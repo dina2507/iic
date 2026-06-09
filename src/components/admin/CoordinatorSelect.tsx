@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,79 +15,83 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Coordinator {
   user_id: string;
   name: string;
   designation: string;
-  email: string | null;
 }
 
 interface CoordinatorSelectProps {
   memberType: "faculty" | "student";
-  value?: string;
-  onChange: (value: string) => void;
+  values?: string[];
+  onChange: (values: string[]) => void;
   placeholder?: string;
 }
 
 export function CoordinatorSelect({
   memberType,
-  value,
+  values = [],
   onChange,
-  placeholder = "Select coordinator...",
+  placeholder = "Select coordinators...",
 }: CoordinatorSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedValue, setSelectedValue] = useState<Coordinator | null>(null);
+  const [selectedCoordinators, setSelectedCoordinators] = useState<Coordinator[]>([]);
 
-  // Fetch initial selected user if a value is provided
+  // Fetch all potential coordinators
   useEffect(() => {
-    if (value && !selectedValue) {
-      const fetchSelected = async () => {
-        const table = memberType === "faculty" ? "faculty_members" : "student_members";
-        const { data } = await supabase
-          .from(table as any)
-          .select("user_id, name, " + (memberType === "faculty" ? "designation" : "role"))
-          .eq("user_id", value)
-          .single();
-          
-        if (data) {
-          setSelectedValue({
-            user_id: data.user_id,
-            name: data.name,
-            designation: (data as any).designation || (data as any).role,
-            email: null,
-          });
-        }
-      };
-      fetchSelected();
-    }
-  }, [value, memberType]);
-
-  useEffect(() => {
-    const fetchCoordinators = async () => {
+    const fetchAllCoordinators = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase.rpc("search_potential_coordinators", {
-        search_query: searchQuery,
-        member_type: memberType,
-      });
+      const table = memberType === "faculty" ? "faculty_members" : "student_members";
+      const selectFields = memberType === "faculty" ? "user_id, name, designation" : "user_id, name, role";
+      
+      const { data, error } = await supabase
+        .from(table as any)
+        .select(selectFields)
+        .not("user_id", "is", null);
 
       if (!error && data) {
-        setCoordinators(data);
+        const formattedData = data.map((d: any) => ({
+          user_id: d.user_id,
+          name: d.name,
+          designation: memberType === "faculty" ? d.designation : d.role,
+        }));
+        setCoordinators(formattedData);
+        
+        // Sync selected coordinators
+        if (values.length > 0) {
+          setSelectedCoordinators(formattedData.filter(c => values.includes(c.user_id)));
+        }
       }
       setIsLoading(false);
     };
 
-    // Debounce search
-    const timer = setTimeout(() => {
-      fetchCoordinators();
-    }, 300);
+    fetchAllCoordinators();
+  }, [memberType, values]);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery, memberType]);
+  const filteredCoordinators = coordinators.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    c.designation?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const toggleCoordinator = (coordinator: Coordinator) => {
+    const isSelected = values.includes(coordinator.user_id);
+    const newValues = isSelected 
+      ? values.filter(v => v !== coordinator.user_id)
+      : [...values, coordinator.user_id];
+    
+    onChange(newValues);
+  };
+
+  const removeCoordinator = (idToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(values.filter(id => id !== idToRemove));
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -96,14 +100,21 @@ export function CoordinatorSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between font-normal text-left"
+          className="w-full justify-between font-normal text-left min-h-10 h-auto py-2"
         >
-          {selectedValue ? (
-            <div className="flex flex-col items-start truncate">
-              <span className="truncate">{selectedValue.name}</span>
-              <span className="text-xs text-muted-foreground truncate">
-                {selectedValue.designation} {selectedValue.email ? `(${selectedValue.email})` : ""}
-              </span>
+          {selectedCoordinators.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {selectedCoordinators.map(c => (
+                <Badge key={c.user_id} variant="secondary" className="mr-1 mb-1">
+                  {c.name}
+                  <button
+                    className="ml-1 hover:bg-muted rounded-full"
+                    onClick={(e) => removeCoordinator(c.user_id, e)}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
             </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -114,7 +125,7 @@ export function CoordinatorSelect({
       <PopoverContent className="w-[400px] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput 
-            placeholder={`Search ${memberType} by name or email...`} 
+            placeholder={`Search ${memberType} members...`} 
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
@@ -123,37 +134,38 @@ export function CoordinatorSelect({
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Searching...
+                  Loading...
                 </div>
               ) : (
-                "No coordinators found."
+                "No members found."
               )}
             </CommandEmpty>
             <CommandGroup>
-              {coordinators.map((coordinator) => (
-                <CommandItem
-                  key={coordinator.user_id}
-                  value={coordinator.user_id}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue);
-                    setSelectedValue(currentValue === value ? null : coordinator);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === coordinator.user_id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{coordinator.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {coordinator.designation} {coordinator.email ? `• ${coordinator.email}` : ""}
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
+              {filteredCoordinators.map((coordinator) => {
+                const isSelected = values.includes(coordinator.user_id);
+                return (
+                  <CommandItem
+                    key={coordinator.user_id}
+                    value={coordinator.user_id}
+                    onSelect={() => toggleCoordinator(coordinator)}
+                  >
+                    <div className="flex items-center w-full">
+                      <div className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible"
+                      )}>
+                        <Check className={cn("h-4 w-4")} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span>{coordinator.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {coordinator.designation}
+                        </span>
+                      </div>
+                    </div>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>
