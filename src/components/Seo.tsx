@@ -5,7 +5,9 @@ interface SeoProps {
   description: string;
   canonical?: string;
   ogImage?: string;
+  ogType?: string;
   jsonLd?: Record<string, unknown>;
+  noindex?: boolean;
 }
 
 export function Seo({
@@ -15,6 +17,7 @@ export function Seo({
   ogImage = '/og-image.png',
   ogType = 'website',
   jsonLd,
+  noindex = false,
 }: SeoProps) {
   useEffect(() => {
     // Basic Meta Tags
@@ -74,6 +77,19 @@ export function Seo({
       link.setAttribute('href', canonical);
     }
 
+    // Robots (noindex for private/hidden pages)
+    let robots = document.querySelector('meta[name="robots"]');
+    if (noindex) {
+      if (!robots) {
+        robots = document.createElement('meta');
+        robots.setAttribute('name', 'robots');
+        document.head.appendChild(robots);
+      }
+      robots.setAttribute('content', 'noindex, nofollow');
+    } else if (robots) {
+      robots.setAttribute('content', 'index, follow');
+    }
+
     // JSON-LD
     let script: HTMLScriptElement | null = null;
     if (jsonLd) {
@@ -89,7 +105,7 @@ export function Seo({
         document.head.removeChild(script);
       }
     };
-  }, [title, description, canonical, ogImage, ogType, jsonLd]);
+  }, [title, description, canonical, ogImage, ogType, jsonLd, noindex]);
 
   return null;
 }

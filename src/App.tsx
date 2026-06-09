@@ -23,6 +23,7 @@ const Domains = lazy(() => import("./pages/Domains"));
 const Startup = lazy(() => import("./pages/Startup"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -63,13 +64,22 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/contact" element={<Contact />} />
-                <Route 
-                  path="/dashboard" 
+                <Route
+                  path="/dashboard"
                   element={
                     <ProtectedRoute>
                       <Dashboard />
                     </ProtectedRoute>
-                  } 
+                  }
+                />
+                {/* Hidden member onboarding link (not in nav) — shared with IIC members */}
+                <Route
+                  path="/member-portal"
+                  element={
+                    <ProtectedRoute>
+                      <MemberPortal />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/admin" 

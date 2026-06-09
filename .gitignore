@@ -49,3 +49,6 @@ vite.config.ts.timestamp-*.mjs
 
 # custom files
 plan.md
+
+# Supabase local CLI state (project ref, versions, etc.)
+supabase/.temp/

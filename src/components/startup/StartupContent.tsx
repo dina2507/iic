@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import "./startup.css";
 
 interface TeamMember {
@@ -69,6 +71,8 @@ interface StartupContentProps {
 }
 
 export function StartupContent({ domainName, slug }: StartupContentProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [events, setEvents] = useState<DomainEvent[]>([]);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
@@ -91,13 +95,13 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
 
     const fetchTeam = async () => {
       const { data } = await supabase
-        .from("student_members")
+        .from("member_directory")
         .select("id, name, role, domain_role, image_url")
+        .eq("member_type", "student")
         .eq("domain", domainName)
-        .eq("is_active", true)
         .order("display_order", { ascending: true });
       if (!cancelled && data) {
-        setMembers(data);
+        setMembers(data as TeamMember[]);
         setActiveMemberId((prev) => prev ?? data[0]?.id ?? null);
       }
     };
@@ -163,7 +167,16 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
     defaultValues: { name: "", email: "", reason: "" },
   });
 
+  const requireLogin = () => {
+    toast.error("Please log in with your VIT account to submit.");
+    navigate("/auth", { state: { from: { pathname: `/${slug}` } } });
+  };
+
   const handleJoinSubmit = async (data: JoinFormData) => {
+    if (!user) {
+      requireLogin();
+      return;
+    }
     setIsJoinSubmitting(true);
     try {
       const { error } = await supabase.from("join_requests").insert({
@@ -187,7 +200,21 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
     defaultValues: { name: "", email: "", idea: "" },
   });
 
+  // Prefill name/email from the logged-in account (submissions require login).
+  useEffect(() => {
+    if (!user) return;
+    const name =
+      (user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || "";
+    const email = user.email ?? "";
+    joinForm.reset({ ...joinForm.getValues(), name, email });
+    ideaForm.reset({ ...ideaForm.getValues(), name, email });
+  }, [user, joinForm, ideaForm]);
+
   const handleIdeaSubmit = async (data: IdeaFormData) => {
+    if (!user) {
+      requireLogin();
+      return;
+    }
     setIsIdeaSubmitting(true);
     try {
       const { error } = await supabase.from("idea_submissions").insert({

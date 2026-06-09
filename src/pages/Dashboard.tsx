@@ -36,8 +36,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { MemberProfileForm } from "@/components/member/MemberProfileForm";
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -53,6 +55,16 @@ const profileSchema = z.object({
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+interface SocialLinks {
+  linkedin?: string;
+  github?: string;
+  twitter?: string;
+  instagram?: string;
+}
+
+const getSocialLinks = (value: unknown): SocialLinks =>
+  value && typeof value === "object" ? (value as SocialLinks) : {};
 
 interface EventRegistration {
   id: string;
@@ -111,17 +123,12 @@ export default function Dashboard() {
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
     const newAvatarUrl = urlData.publicUrl;
 
-    // Update profiles table
+    // Update the account profile avatar. (The public member-card photo is managed
+    // separately in the Member Profile tab / member portal.)
     const { error: profileError } = await supabase
       .from("profiles")
       .update({ avatar_url: newAvatarUrl })
       .eq("id", user.id);
-
-    // Update student_members table (if they exist there)
-    await supabase
-      .from("student_members")
-      .update({ image_url: newAvatarUrl })
-      .eq("user_id", user.id);
 
     if (!profileError) {
       toast({ title: "Success", description: "Avatar updated successfully" });
@@ -194,10 +201,10 @@ export default function Dashboard() {
       phone_number: profile?.phone_number || "",
       about: profile?.about || "",
       social_links: {
-        linkedin: (profile?.social_links as any)?.linkedin || "",
-        github: (profile?.social_links as any)?.github || "",
-        twitter: (profile?.social_links as any)?.twitter || "",
-        instagram: (profile?.social_links as any)?.instagram || "",
+        linkedin: getSocialLinks(profile?.social_links).linkedin || "",
+        github: getSocialLinks(profile?.social_links).github || "",
+        twitter: getSocialLinks(profile?.social_links).twitter || "",
+        instagram: getSocialLinks(profile?.social_links).instagram || "",
       }
     },
   });
@@ -210,10 +217,10 @@ export default function Dashboard() {
         phone_number: profile.phone_number || "",
         about: profile.about || "",
         social_links: {
-          linkedin: (profile.social_links as any)?.linkedin || "",
-          github: (profile.social_links as any)?.github || "",
-          twitter: (profile.social_links as any)?.twitter || "",
-          instagram: (profile.social_links as any)?.instagram || "",
+          linkedin: getSocialLinks(profile.social_links).linkedin || "",
+          github: getSocialLinks(profile.social_links).github || "",
+          twitter: getSocialLinks(profile.social_links).twitter || "",
+          instagram: getSocialLinks(profile.social_links).instagram || "",
         }
       });
     }
@@ -229,7 +236,7 @@ export default function Dashboard() {
           avatar_url: data.avatar_url || null,
           phone_number: data.phone_number || null,
           about: data.about || null,
-          social_links: data.social_links as any,
+          social_links: data.social_links as Json,
         })
         .eq("id", user.id);
       if (error) throw error;
@@ -333,16 +340,38 @@ export default function Dashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="events" className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-xl grid-cols-3">
               <TabsTrigger value="events" className="gap-2">
                 <Calendar className="w-4 h-4" />
                 My Events
               </TabsTrigger>
+              <TabsTrigger value="member" className="gap-2">
+                <User className="w-4 h-4" />
+                Member Profile
+              </TabsTrigger>
               <TabsTrigger value="profile" className="gap-2">
                 <Settings className="w-4 h-4" />
-                Profile
+                Account
               </TabsTrigger>
             </TabsList>
+
+            {/* Member Profile Tab */}
+            <TabsContent value="member" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-accent" />
+                    Member Profile
+                  </CardTitle>
+                  <CardDescription>
+                    Your public team-card details. Changes appear on the Members page once approved.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MemberProfileForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Events Tab */}
             <TabsContent value="events" className="space-y-6">
@@ -651,39 +680,45 @@ export default function Dashboard() {
                           
                           <div>
                             <Label className="text-muted-foreground mb-2 block">Social Profiles</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {(profile?.social_links as any)?.linkedin && (
-                                <Button size="sm" variant="outline" asChild className="gap-2">
-                                  <a href={(profile?.social_links as any).linkedin} target="_blank" rel="noreferrer">
-                                    <Linkedin className="w-3 h-3" /> LinkedIn
-                                  </a>
-                                </Button>
-                              )}
-                              {(profile?.social_links as any)?.github && (
-                                <Button size="sm" variant="outline" asChild className="gap-2">
-                                  <a href={(profile?.social_links as any).github} target="_blank" rel="noreferrer">
-                                    <Github className="w-3 h-3" /> GitHub
-                                  </a>
-                                </Button>
-                              )}
-                              {(profile?.social_links as any)?.twitter && (
-                                <Button size="sm" variant="outline" asChild className="gap-2">
-                                  <a href={(profile?.social_links as any).twitter} target="_blank" rel="noreferrer">
-                                    <Twitter className="w-3 h-3" /> Twitter
-                                  </a>
-                                </Button>
-                              )}
-                              {(profile?.social_links as any)?.instagram && (
-                                <Button size="sm" variant="outline" asChild className="gap-2">
-                                  <a href={(profile?.social_links as any).instagram} target="_blank" rel="noreferrer">
-                                    <Instagram className="w-3 h-3" /> Instagram
-                                  </a>
-                                </Button>
-                              )}
-                              {!(profile?.social_links as any)?.linkedin && !(profile?.social_links as any)?.github && !(profile?.social_links as any)?.twitter && !(profile?.social_links as any)?.instagram && (
-                                <p className="text-sm text-muted-foreground italic">No social links added.</p>
-                              )}
-                            </div>
+                            {(() => {
+                              const social = getSocialLinks(profile?.social_links);
+                              const hasAny = social.linkedin || social.github || social.twitter || social.instagram;
+                              return (
+                                <div className="flex flex-wrap gap-2">
+                                  {social.linkedin && (
+                                    <Button size="sm" variant="outline" asChild className="gap-2">
+                                      <a href={social.linkedin} target="_blank" rel="noreferrer">
+                                        <Linkedin className="w-3 h-3" /> LinkedIn
+                                      </a>
+                                    </Button>
+                                  )}
+                                  {social.github && (
+                                    <Button size="sm" variant="outline" asChild className="gap-2">
+                                      <a href={social.github} target="_blank" rel="noreferrer">
+                                        <Github className="w-3 h-3" /> GitHub
+                                      </a>
+                                    </Button>
+                                  )}
+                                  {social.twitter && (
+                                    <Button size="sm" variant="outline" asChild className="gap-2">
+                                      <a href={social.twitter} target="_blank" rel="noreferrer">
+                                        <Twitter className="w-3 h-3" /> Twitter
+                                      </a>
+                                    </Button>
+                                  )}
+                                  {social.instagram && (
+                                    <Button size="sm" variant="outline" asChild className="gap-2">
+                                      <a href={social.instagram} target="_blank" rel="noreferrer">
+                                        <Instagram className="w-3 h-3" /> Instagram
+                                      </a>
+                                    </Button>
+                                  )}
+                                  {!hasAny && (
+                                    <p className="text-sm text-muted-foreground italic">No social links added.</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>

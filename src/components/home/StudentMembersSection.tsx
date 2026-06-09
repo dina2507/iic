@@ -36,9 +36,9 @@ export function StudentMembersSection() {
     queryKey: ['student-members-home'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("student_members")
+        .from("member_directory")
         .select("id, name, role, domain, image_url, linkedin_url, whatsapp_url, is_core_member")
-        .eq("is_active", true)
+        .eq("member_type", "student")
         .order("display_order", { ascending: true })
         .limit(6);
       if (error) throw error;

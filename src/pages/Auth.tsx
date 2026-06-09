@@ -15,6 +15,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
+// VIT students use @vitstudent.ac.in; faculty/staff use @vit.ac.in.
+const ALLOWED_EMAIL_DOMAINS = ["@vit.ac.in", "@vitstudent.ac.in"];
+const isAllowedVitEmail = (email: string) =>
+  ALLOWED_EMAIL_DOMAINS.some((d) => email.toLowerCase().endsWith(d));
+
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
@@ -47,7 +52,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user, loading: authLoading, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signIn, signUp, signInWithGoogle, signOut } = useAuth();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
   const [showPassword, setShowPassword] = useState(false);
@@ -62,19 +67,21 @@ export default function Auth() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      // Validate email domain for VIT students
+      // Validate email domain (faculty @vit.ac.in / students @vitstudent.ac.in).
       const email = user.email || "";
-      if (!email.endsWith("@vitstudent.ac.in")) {
+      if (!isAllowedVitEmail(email)) {
         toast({
           title: "Access Denied",
-          description: "Only @vitstudent.ac.in email addresses are allowed.",
+          description: "Only @vit.ac.in or @vitstudent.ac.in email addresses are allowed.",
           variant: "destructive",
         });
+        // Don't leave a non-VIT account logged in.
+        signOut();
         return;
       }
       navigate(from, { replace: true });
     }
-  }, [user, authLoading, navigate, toast, from]);
+  }, [user, authLoading, navigate, toast, from, signOut]);
 
   // Handle session cleanup when browser closes if "Remember me" is unchecked
   useEffect(() => {
@@ -134,10 +141,10 @@ export default function Auth() {
   };
 
   const handleSignup = async (data: SignupFormData) => {
-    if (!data.email.endsWith("@vitstudent.ac.in")) {
+    if (!isAllowedVitEmail(data.email)) {
       toast({
         title: "Invalid Email",
-        description: "Only @vitstudent.ac.in email addresses are allowed.",
+        description: "Use your VIT email — @vit.ac.in (faculty) or @vitstudent.ac.in (students).",
         variant: "destructive",
       });
       return;
@@ -177,10 +184,10 @@ export default function Auth() {
   };
 
   const handleForgotPassword = async (data: ForgotPasswordFormData) => {
-    if (!data.email.endsWith("@vitstudent.ac.in")) {
+    if (!isAllowedVitEmail(data.email)) {
       toast({
         title: "Invalid Email",
-        description: "Only @vitstudent.ac.in email addresses are allowed.",
+        description: "Use your VIT email — @vit.ac.in (faculty) or @vitstudent.ac.in (students).",
         variant: "destructive",
       });
       return;
@@ -225,8 +232,8 @@ export default function Auth() {
           <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center">
             <Sparkles className="w-6 h-6 text-accent" />
           </div>
-          <CardTitle className="text-2xl font-bold">IIC Admin Portal</CardTitle>
-          <CardDescription>Manage events and content for the IIC website</CardDescription>
+          <CardTitle className="text-2xl font-bold">Sign in to IIC VIT</CardTitle>
+          <CardDescription>Access your dashboard, register for events, and manage your profile</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-6">
@@ -245,7 +252,7 @@ export default function Auth() {
               Continue with Google
             </Button>
             <p className="text-xs text-muted-foreground text-center mt-2">
-              Only @vitstudent.ac.in accounts allowed
+              Only @vit.ac.in and @vitstudent.ac.in accounts allowed
             </p>
           </div>
 
@@ -269,7 +276,7 @@ export default function Auth() {
                   <Input
                     id="login-email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="you@vitstudent.ac.in"
                     {...loginForm.register("email")}
                   />
                   {loginForm.formState.errors.email && (
@@ -390,7 +397,7 @@ export default function Auth() {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="you@vitstudent.ac.in"
                     {...signupForm.register("email")}
                   />
                   {signupForm.formState.errors.email && (

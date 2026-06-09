@@ -368,7 +368,7 @@ export default function Admin() {
             {isAdmin && (
               <TabsTrigger value="users" className="gap-2">
                 <Users className="w-4 h-4" />
-                Users
+                Roles & Access
               </TabsTrigger>
             )}
           </TabsList>
@@ -789,10 +789,10 @@ export default function Admin() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="w-5 h-5" />
-                    User Management
+                    Roles & Access
                   </CardTitle>
                   <CardDescription>
-                    Manage user roles and permissions. Assign admin access to VIT student accounts.
+                    Manage user roles and permissions. Assign admin or moderator access to VIT accounts.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

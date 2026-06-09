@@ -17,9 +17,9 @@ export function FacultySection() {
     queryKey: ['faculty-members-home'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("faculty_members")
+        .from("member_directory")
         .select("id, name, designation, department, image_url, email, linkedin_url")
-        .eq("is_active", true)
+        .eq("member_type", "faculty")
         .order("display_order", { ascending: true });
       if (error) throw error;
       return (data ?? []) as FacultyMember[];

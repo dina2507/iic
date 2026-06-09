@@ -129,10 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
+        // Allow both VIT domains (faculty @vit.ac.in, students @vitstudent.ac.in).
+        // The actual domain restriction is enforced server-side by the
+        // enforce_email_domain trigger on auth.users.
         redirectTo: `${window.location.origin}/auth`,
-        queryParams: {
-          hd: 'vitstudent.ac.in',
-        },
       },
     });
     return { error };

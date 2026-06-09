@@ -192,43 +192,67 @@ export type Database = {
       }
       faculty_members: {
         Row: {
+          about: string | null
           created_at: string
           department: string
           designation: string
           display_order: number
           email: string | null
+          github_url: string | null
           id: string
           image_url: string | null
+          instagram_url: string | null
           is_active: boolean | null
           linkedin_url: string | null
           name: string
+          phone_number: string | null
+          social_visibility: Json
+          twitter_url: string | null
           updated_at: string
+          user_id: string | null
+          whatsapp_url: string | null
         }
         Insert: {
+          about?: string | null
           created_at?: string
           department: string
           designation: string
           display_order?: number
           email?: string | null
+          github_url?: string | null
           id?: string
           image_url?: string | null
+          instagram_url?: string | null
           is_active?: boolean | null
           linkedin_url?: string | null
           name: string
+          phone_number?: string | null
+          social_visibility?: Json
+          twitter_url?: string | null
           updated_at?: string
+          user_id?: string | null
+          whatsapp_url?: string | null
         }
         Update: {
+          about?: string | null
           created_at?: string
           department?: string
           designation?: string
           display_order?: number
           email?: string | null
+          github_url?: string | null
           id?: string
           image_url?: string | null
+          instagram_url?: string | null
           is_active?: boolean | null
           linkedin_url?: string | null
           name?: string
+          phone_number?: string | null
+          social_visibility?: Json
+          twitter_url?: string | null
           updated_at?: string
+          user_id?: string | null
+          whatsapp_url?: string | null
         }
         Relationships: []
       }
@@ -309,49 +333,67 @@ export type Database = {
       }
       student_members: {
         Row: {
+          about: string | null
           created_at: string
           display_order: number
           domain: string | null
           domain_role: string
+          github_url: string | null
           id: string
           image_url: string | null
+          instagram_url: string | null
           is_active: boolean | null
           is_core_member: boolean | null
           linkedin_url: string | null
           name: string
+          phone_number: string | null
           role: string
+          social_visibility: Json
+          twitter_url: string | null
           updated_at: string
           user_id: string | null
           whatsapp_url: string | null
         }
         Insert: {
+          about?: string | null
           created_at?: string
           display_order?: number
           domain?: string | null
           domain_role?: string
+          github_url?: string | null
           id?: string
           image_url?: string | null
+          instagram_url?: string | null
           is_active?: boolean | null
           is_core_member?: boolean | null
           linkedin_url?: string | null
           name: string
+          phone_number?: string | null
           role: string
+          social_visibility?: Json
+          twitter_url?: string | null
           updated_at?: string
           user_id?: string | null
           whatsapp_url?: string | null
         }
         Update: {
+          about?: string | null
           created_at?: string
           display_order?: number
           domain?: string | null
           domain_role?: string
+          github_url?: string | null
           id?: string
           image_url?: string | null
+          instagram_url?: string | null
           is_active?: boolean | null
           is_core_member?: boolean | null
           linkedin_url?: string | null
           name?: string
+          phone_number?: string | null
           role?: string
+          social_visibility?: Json
+          twitter_url?: string | null
           updated_at?: string
           user_id?: string | null
           whatsapp_url?: string | null
@@ -413,7 +455,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      member_directory: {
+        Row: {
+          about: string | null
+          department: string | null
+          designation: string | null
+          display_order: number | null
+          domain: string | null
+          domain_role: string | null
+          email: string | null
+          github_url: string | null
+          id: string | null
+          image_url: string | null
+          instagram_url: string | null
+          is_core_member: boolean | null
+          linkedin_url: string | null
+          member_type: string | null
+          name: string | null
+          phone_number: string | null
+          role: string | null
+          twitter_url: string | null
+          whatsapp_url: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -422,6 +487,31 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_member: {
+        Args: {
+          _uid: string
+        }
+        Returns: boolean
+      }
+      upsert_my_member_profile: {
+        Args: {
+          p_name: string
+          p_phone_number?: string | null
+          p_about?: string | null
+          p_domain?: string | null
+          p_role?: string | null
+          p_designation?: string | null
+          p_department?: string | null
+          p_image_url?: string | null
+          p_linkedin_url?: string | null
+          p_twitter_url?: string | null
+          p_instagram_url?: string | null
+          p_github_url?: string | null
+          p_whatsapp_url?: string | null
+          p_social_visibility?: Json
+        }
+        Returns: string
       }
     }
     Enums: {

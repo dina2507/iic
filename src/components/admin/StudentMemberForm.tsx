@@ -7,6 +7,7 @@ import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -25,9 +26,14 @@ const studentMemberSchema = z.object({
   role: z.string().min(2, "Role must be at least 2 characters").max(100, "Role must be at most 100 characters"),
   domain: z.string().optional(),
   domain_role: z.enum(["head", "coordinator", "member"], { required_error: "Select a designation" }),
+  phone_number: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
+  about: z.string().max(500, "About must be 500 characters or fewer").optional().or(z.literal("")),
   image_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   linkedin_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   whatsapp_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  twitter_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  instagram_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  github_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   display_order: z.number().min(0, "Display order must be 0 or greater"),
   is_core_member: z.boolean(),
   is_active: z.boolean(),
@@ -41,9 +47,15 @@ interface StudentMember {
   role: string;
   domain: string | null;
   domain_role: string | null;
+  user_id?: string | null;
+  phone_number?: string | null;
+  about?: string | null;
   image_url: string | null;
   linkedin_url: string | null;
   whatsapp_url: string | null;
+  twitter_url?: string | null;
+  instagram_url?: string | null;
+  github_url?: string | null;
   display_order: number;
   is_active: boolean | null;
   is_core_member: boolean | null;
@@ -75,9 +87,14 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
       role: member?.role || "",
       domain: member?.domain || "",
       domain_role: (member?.domain_role as "head" | "coordinator" | "member") || "member",
+      phone_number: member?.phone_number || "",
+      about: member?.about || "",
       image_url: member?.image_url || "",
       linkedin_url: member?.linkedin_url || "",
       whatsapp_url: member?.whatsapp_url || "",
+      twitter_url: member?.twitter_url || "",
+      instagram_url: member?.instagram_url || "",
+      github_url: member?.github_url || "",
       display_order: member?.display_order || 0,
       is_active: member?.is_active ?? true,
       is_core_member: member?.is_core_member ?? false,
@@ -114,7 +131,7 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
     const fileName = `student-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("event-images")
+      .from("avatars")
       .upload(fileName, file);
 
     if (uploadError) {
@@ -123,7 +140,7 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(fileName);
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
     form.setValue("image_url", urlData.publicUrl);
     setIsUploading(false);
   };
@@ -136,9 +153,14 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
       role: data.role,
       domain: data.domain || null,
       domain_role: data.domain_role || "member",
+      phone_number: data.phone_number || null,
+      about: data.about || null,
       image_url: data.image_url || null,
       linkedin_url: data.linkedin_url || null,
       whatsapp_url: data.whatsapp_url || null,
+      twitter_url: data.twitter_url || null,
+      instagram_url: data.instagram_url || null,
+      github_url: data.github_url || null,
       display_order: data.display_order,
       is_active: data.is_active,
       is_core_member: data.is_core_member,
@@ -160,12 +182,46 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Success", description: member ? "Student member updated" : "Student member added" });
-      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
-      onSuccess();
+      setIsLoading(false);
+      return;
     }
+
+    // Keep the real permission table (user_domain_roles) in sync with the assigned
+    // designation, so "head"/"coordinator" grants actual capabilities (event creation,
+    // viewing registrations) -- not just a display badge. Only possible when the member
+    // is linked to an account and a domain.
+    if (member?.user_id && data.domain) {
+      await syncDomainRole(member.user_id, data.domain, data.domain_role);
+    }
+
+    toast({ title: "Success", description: member ? "Student member updated" : "Student member added" });
+    queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+    onSuccess();
     setIsLoading(false);
+  };
+
+  const syncDomainRole = async (
+    userId: string,
+    domainName: string,
+    role: "head" | "coordinator" | "member"
+  ) => {
+    const { data: domainRow } = await supabase
+      .from("domains")
+      .select("id")
+      .eq("name", domainName)
+      .maybeSingle();
+    if (!domainRow) return;
+    // upsert on the (user_id, domain_id) unique constraint
+    const { error: roleError } = await supabase
+      .from("user_domain_roles")
+      .upsert({ user_id: userId, domain_id: domainRow.id, role }, { onConflict: "user_id,domain_id" });
+    if (roleError) {
+      toast({
+        title: "Role partially saved",
+        description: "Member saved, but the domain permission could not be updated: " + roleError.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -286,6 +342,47 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
           />
           {form.formState.errors.whatsapp_url && (
             <p className="text-sm text-destructive">{form.formState.errors.whatsapp_url.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="github">GitHub URL</Label>
+          <Input id="github" {...form.register("github_url")} placeholder="https://github.com/..." />
+          {form.formState.errors.github_url && (
+            <p className="text-sm text-destructive">{form.formState.errors.github_url.message}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="twitter">Twitter URL</Label>
+          <Input id="twitter" {...form.register("twitter_url")} placeholder="https://twitter.com/..." />
+          {form.formState.errors.twitter_url && (
+            <p className="text-sm text-destructive">{form.formState.errors.twitter_url.message}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="instagram">Instagram URL</Label>
+          <Input id="instagram" {...form.register("instagram_url")} placeholder="https://instagram.com/..." />
+          {form.formState.errors.instagram_url && (
+            <p className="text-sm text-destructive">{form.formState.errors.instagram_url.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="phone_number">Contact number</Label>
+          <Input id="phone_number" {...form.register("phone_number")} placeholder="+91..." />
+          {form.formState.errors.phone_number && (
+            <p className="text-sm text-destructive">{form.formState.errors.phone_number.message}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="about">About</Label>
+          <Textarea id="about" {...form.register("about")} maxLength={500} className="min-h-[40px]" />
+          {form.formState.errors.about && (
+            <p className="text-sm text-destructive">{form.formState.errors.about.message}</p>
           )}
         </div>
       </div>
