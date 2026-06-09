@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Calendar, MapPin, Clock, ArrowRight, ChevronLeft, ChevronRight, Sparkles, Loader2, CheckCircle } from "lucide-react";
+import { Calendar, MapPin, Clock, ArrowRight, ChevronLeft, ChevronRight, Sparkles, Loader2, CheckCircle, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
@@ -23,41 +23,7 @@ interface Event {
   registration_link: string | null;
 }
 
-// Fallback events when no events in database
-const fallbackEvents: Event[] = [{
-  id: "1",
-  title: "Innovation Hackathon 2024",
-  description: "48-hour intensive hackathon focused on solving real-world problems with technology. Join teams, build prototypes, and win exciting prizes.",
-  date: "2024-02-15",
-  time: "09:00 AM",
-  venue: "Tech Park, VIT",
-  mode: "offline",
-  eligibility: "both",
-  image_url: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1920&h=1080&fit=crop",
-  registration_link: null
-}, {
-  id: "2",
-  title: "Startup Pitch Night",
-  description: "Present your startup idea to industry experts and angel investors. Get valuable feedback and potential funding opportunities.",
-  date: "2024-02-20",
-  time: "06:00 PM",
-  venue: "Online (Zoom)",
-  mode: "online",
-  eligibility: "internal",
-  image_url: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=1920&h=1080&fit=crop",
-  registration_link: null
-}, {
-  id: "3",
-  title: "Design Thinking Workshop",
-  description: "Learn the fundamentals of design thinking and apply it to innovation challenges. Hands-on sessions with industry mentors.",
-  date: "2024-02-25",
-  time: "02:00 PM",
-  venue: "Design Lab, AB1",
-  mode: "offline",
-  eligibility: "both",
-  image_url: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=1920&h=1080&fit=crop",
-  registration_link: null
-}];
+
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
@@ -87,10 +53,25 @@ export function HeroSection() {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
-  const [events, setEvents] = useState<Event[]>(fallbackEvents);
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const { data: events = [], isLoading: eventsLoading } = useQuery({
+    queryKey: ['hero-featured-events'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_featured", true)
+        .gte("date", new Date().toISOString().split('T')[0])
+        .order("display_order", { ascending: true })
+        .order("date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Event[];
+    },
+  });
 
   const { data: registrations } = useQuery({
     queryKey: ['my-registrations'],
@@ -122,7 +103,7 @@ export function HeroSection() {
         window.open(data.registrationLink, '_blank');
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       if (error.message?.includes('duplicate')) {
         toast.error('Already registered for this event');
       } else {
@@ -142,22 +123,7 @@ export function HeroSection() {
     registerMutation.mutate({ eventId, registrationLink });
   };
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      const {
-        data,
-        error
-      } = await supabase.from("events").select("*").eq("is_active", true).eq("is_featured", true).order("display_order", {
-        ascending: true
-      }).order("date", {
-        ascending: true
-      });
-      if (!error && data && data.length > 0) {
-        setEvents(data);
-      }
-    };
-    fetchEvents();
-  }, []);
+
 
   useEffect(() => {
     if (!api) return;
@@ -171,6 +137,62 @@ export function HeroSection() {
   const scrollPrev = useCallback(() => api?.scrollPrev(), [api]);
   const scrollNext = useCallback(() => api?.scrollNext(), [api]);
   const scrollTo = useCallback((index: number) => api?.scrollTo(index), [api]);
+
+  // Show branded hero when no featured events exist (or while loading)
+  if (eventsLoading || events.length === 0) {
+    return (
+      <section className="relative min-h-screen w-full overflow-hidden">
+        {/* IIC Badge - Fixed Position */}
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-background/20 backdrop-blur-md border border-foreground/10 shadow-lg">
+            <Sparkles className="w-4 h-4 text-accent" />
+            <span className="text-foreground/90 text-sm font-medium">IIC-VIT </span>
+          </div>
+        </div>
+
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-accent/20 via-background to-primary/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+
+        {/* Content */}
+        <div className="relative z-10 min-h-screen flex items-center">
+          <div className="container mx-auto px-4 py-24">
+            <div className="max-w-3xl mx-auto text-center">
+              <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-8">
+                <Rocket className="w-10 h-10 text-accent" />
+              </div>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight">
+                Welcome to <span className="text-accent">IIC VIT</span>
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed max-w-xl mx-auto">
+                Fostering innovation and entrepreneurship at VIT University
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <Link to="/events">
+                  <Button size="lg" className="gradient-innovation text-accent-foreground border-0 shadow-lg hover:shadow-xl transition-all group px-8">
+                    Explore Events
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+                <Link to="/auth?tab=signup">
+                  <Button size="lg" variant="outline" className="bg-background/10 border-foreground/30 hover:bg-background/20 backdrop-blur-sm px-8">
+                    Join IIC
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 animate-bounce">
+          <div className="w-6 h-10 rounded-full border-2 border-foreground/30 flex items-start justify-center p-2">
+            <div className="w-1.5 h-2.5 rounded-full bg-foreground/50" />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return <section className="relative min-h-screen w-full overflow-hidden">
       {/* IIC Badge - Fixed Position */}
@@ -306,7 +328,7 @@ export function HeroSection() {
       </Button>
 
       {/* Progress Dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
+      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
         {Array.from({
         length: count
       }).map((_, index) => <button key={index} onClick={() => scrollTo(index)} className={`relative h-3 rounded-full transition-all duration-500 overflow-hidden ${index === current ? "w-12 bg-accent" : "w-3 bg-foreground/30 hover:bg-foreground/50"}`} aria-label={`Go to slide ${index + 1}`}>
@@ -324,7 +346,7 @@ export function HeroSection() {
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-4 md:left-8 z-20 animate-bounce">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 animate-bounce">
         <div className="w-6 h-10 rounded-full border-2 border-foreground/30 flex items-start justify-center p-2">
           <div className="w-1.5 h-2.5 rounded-full bg-foreground/50" />
         </div>

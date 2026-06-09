@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +11,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2 } from "lucide-react";
+
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+const gallerySchema = z.object({
+  title: z.string().min(2, "Title must be at least 2 characters").max(200, "Title must be at most 200 characters"),
+  description: z.string().max(500, "Description must be at most 500 characters").optional().or(z.literal("")),
+  image_url: z.string().url("A valid image URL is required"),
+  event_name: z.string().max(200, "Event name must be at most 200 characters").optional().or(z.literal("")),
+  event_date: z.string().optional().or(z.literal("")),
+  display_order: z.number().min(0, "Display order must be 0 or greater").optional(),
+  is_featured: z.boolean(),
+});
+
+type GalleryFormData = z.infer<typeof gallerySchema>;
 
 interface GalleryFormProps {
   gallery?: {
@@ -26,22 +43,36 @@ interface GalleryFormProps {
 export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: gallery?.title || "",
-    description: gallery?.description || "",
-    image_url: gallery?.image_url || "",
-    event_name: gallery?.event_name || "",
-    event_date: gallery?.event_date || "",
-    display_order: gallery?.display_order || 0,
-    is_featured: gallery?.is_featured || false,
-  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const form = useForm<GalleryFormData>({
+    resolver: zodResolver(gallerySchema),
+    defaultValues: {
+      title: gallery?.title || "",
+      description: gallery?.description || "",
+      image_url: gallery?.image_url || "",
+      event_name: gallery?.event_name || "",
+      event_date: gallery?.event_date || "",
+      display_order: gallery?.display_order || 0,
+      is_featured: gallery?.is_featured || false,
+    },
+  });
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      toast({ title: "Invalid file type", description: "Only JPEG, PNG, WebP, and GIF images are allowed", variant: "destructive" });
+      return;
+    }
 
     setIsUploading(true);
     try {
@@ -59,9 +90,9 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
         .from("event-images")
         .getPublicUrl(filePath);
 
-      setFormData((prev) => ({ ...prev, image_url: publicUrl }));
+      form.setValue("image_url", publicUrl);
       toast({ title: "Image uploaded successfully" });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Upload failed",
         description: error.message,
@@ -72,19 +103,18 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: GalleryFormData) => {
     setIsLoading(true);
 
     try {
       const payload = {
-        title: formData.title,
-        description: formData.description || null,
-        image_url: formData.image_url,
-        event_name: formData.event_name || null,
-        event_date: formData.event_date || null,
-        display_order: formData.display_order,
-        is_featured: formData.is_featured,
+        title: data.title,
+        description: data.description || null,
+        image_url: data.image_url,
+        event_name: data.event_name || null,
+        event_date: data.event_date || null,
+        display_order: data.display_order ?? 0,
+        is_featured: data.is_featured,
       };
 
       if (gallery) {
@@ -103,7 +133,7 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
       queryClient.invalidateQueries({ queryKey: ["gallery"] });
       queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
         description: error.message,
@@ -115,25 +145,28 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
         <Input
           id="title"
-          value={formData.title}
-          onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-          required
+          {...form.register("title")}
         />
+        {form.formState.errors.title && (
+          <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
-          value={formData.description}
-          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+          {...form.register("description")}
           rows={3}
         />
+        {form.formState.errors.description && (
+          <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -141,7 +174,7 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
         <div className="flex items-center gap-4">
           <Input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={handleImageUpload}
             disabled={isUploading}
             className="hidden"
@@ -158,9 +191,9 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
             )}
             {isUploading ? "Uploading..." : "Upload Image"}
           </Label>
-          {formData.image_url && (
+          {form.watch("image_url") && (
             <img
-              src={formData.image_url}
+              src={form.watch("image_url")}
               alt="Preview"
               className="w-16 h-16 object-cover rounded-lg"
             />
@@ -168,9 +201,11 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
         </div>
         <Input
           placeholder="Or enter image URL"
-          value={formData.image_url}
-          onChange={(e) => setFormData((prev) => ({ ...prev, image_url: e.target.value }))}
+          {...form.register("image_url")}
         />
+        {form.formState.errors.image_url && (
+          <p className="text-sm text-destructive">{form.formState.errors.image_url.message}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -178,9 +213,11 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
           <Label htmlFor="event_name">Event Name</Label>
           <Input
             id="event_name"
-            value={formData.event_name}
-            onChange={(e) => setFormData((prev) => ({ ...prev, event_name: e.target.value }))}
+            {...form.register("event_name")}
           />
+          {form.formState.errors.event_name && (
+            <p className="text-sm text-destructive">{form.formState.errors.event_name.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -188,8 +225,7 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
           <Input
             id="event_date"
             type="date"
-            value={formData.event_date}
-            onChange={(e) => setFormData((prev) => ({ ...prev, event_date: e.target.value }))}
+            {...form.register("event_date")}
           />
         </div>
       </div>
@@ -200,22 +236,24 @@ export function GalleryForm({ gallery, onSuccess }: GalleryFormProps) {
           <Input
             id="display_order"
             type="number"
-            value={formData.display_order}
-            onChange={(e) => setFormData((prev) => ({ ...prev, display_order: parseInt(e.target.value) || 0 }))}
+            {...form.register("display_order", { valueAsNumber: true })}
           />
+          {form.formState.errors.display_order && (
+            <p className="text-sm text-destructive">{form.formState.errors.display_order.message}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-3 pt-6">
           <Switch
             id="is_featured"
-            checked={formData.is_featured}
-            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_featured: checked }))}
+            checked={form.watch("is_featured")}
+            onCheckedChange={(checked) => form.setValue("is_featured", checked)}
           />
           <Label htmlFor="is_featured">Featured</Label>
         </div>
       </div>
 
-      <Button type="submit" disabled={isLoading || !formData.title || !formData.image_url} className="w-full">
+      <Button type="submit" disabled={isLoading} className="w-full">
         {isLoading ? "Saving..." : gallery ? "Update Image" : "Add Image"}
       </Button>
     </form>

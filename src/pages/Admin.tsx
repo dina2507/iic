@@ -16,6 +16,7 @@ import {
   Layers,
   Palette,
   Image,
+  MessageSquare,
   Users,
   UserCheck,
   BarChart3,
@@ -37,6 +38,7 @@ import UserManagement from "@/components/admin/UserManagement";
 import EventRegistrations from "@/components/admin/EventRegistrations";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import MembersManagement from "@/components/admin/MembersManagement";
+import SubmissionsManagement from "@/components/admin/SubmissionsManagement";
 
 interface Event {
   id: string;
@@ -84,8 +86,8 @@ interface GalleryImage {
 export default function Admin() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading: authLoading, isAdmin, isModerator, signOut } = useAuth();
-  const canManageContent = isAdmin || isModerator;
+  const { user, loading: authLoading, isAdmin, isModerator, isDomainAdmin, signOut } = useAuth();
+  const canManageContent = isAdmin || isModerator || isDomainAdmin;
   const [events, setEvents] = useState<Event[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,14 +318,25 @@ export default function Admin() {
             </CardContent>
           </Card>
         )}
+        {isDomainAdmin && !isAdmin && !isModerator && (
+          <Card className="mb-6 border-blue-500/50 bg-blue-500/10">
+            <CardContent className="pt-6">
+              <p className="text-blue-600 dark:text-blue-400">
+                ℹ️ You are a Domain Admin. You can manage Events and Registrations for your domains, and assign roles to members.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs for Events, Domains, and Gallery */}
-        <Tabs defaultValue="analytics" className="space-y-6">
+        <Tabs defaultValue="events" className="space-y-6">
           <TabsList className="flex flex-wrap w-full max-w-5xl gap-1">
-            <TabsTrigger value="analytics" className="gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Analytics
-            </TabsTrigger>
+            {(isAdmin || isModerator) && (
+              <TabsTrigger value="analytics" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </TabsTrigger>
+            )}
             <TabsTrigger value="events" className="gap-2">
               <Calendar className="w-4 h-4" />
               Events
@@ -336,14 +349,22 @@ export default function Admin() {
               <GraduationCap className="w-4 h-4" />
               Members
             </TabsTrigger>
-            <TabsTrigger value="domains" className="gap-2">
-              <Palette className="w-4 h-4" />
-              Domains
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="gap-2">
-              <Image className="w-4 h-4" />
-              Gallery
-            </TabsTrigger>
+            {(isAdmin || isModerator) && (
+              <>
+                <TabsTrigger value="domains" className="gap-2">
+                  <Palette className="w-4 h-4" />
+                  Domains
+                </TabsTrigger>
+                <TabsTrigger value="gallery" className="gap-2">
+                  <Image className="w-4 h-4" />
+                  Gallery
+                </TabsTrigger>
+                <TabsTrigger value="submissions" className="gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Submissions
+                </TabsTrigger>
+              </>
+            )}
             {isAdmin && (
               <TabsTrigger value="users" className="gap-2">
                 <Users className="w-4 h-4" />
@@ -353,22 +374,24 @@ export default function Admin() {
           </TabsList>
 
           {/* Analytics Tab */}
-          <TabsContent value="analytics">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Analytics Dashboard
-                </CardTitle>
-                <CardDescription>
-                  Overview of site statistics and registration trends.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AnalyticsDashboard />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {(isAdmin || isModerator) && (
+            <TabsContent value="analytics">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Analytics Dashboard
+                  </CardTitle>
+                  <CardDescription>
+                    Overview of site statistics and registration trends.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AnalyticsDashboard />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Events Tab */}
           <TabsContent value="events">
@@ -534,37 +557,38 @@ export default function Admin() {
           </TabsContent>
 
           {/* Domains Tab */}
-          <TabsContent value="domains">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Palette className="w-5 h-5" />
-                    Domains Management
-                  </CardTitle>
-                  <CardDescription>
-                    Manage IIC domains, their descriptions, and team members.
-                  </CardDescription>
-                </div>
-                {isAdmin && (
-                  <Button onClick={() => setIsDomainFormOpen(true)} className="gradient-innovation">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Domain
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                {domainsLoading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          {(isAdmin || isModerator) && (
+            <TabsContent value="domains">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Palette className="w-5 h-5" />
+                      Domains Management
+                    </CardTitle>
+                    <CardDescription>
+                      Manage IIC domains, their descriptions, and team members.
+                    </CardDescription>
                   </div>
-                ) : domains.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Palette className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No domains found. Create your first domain!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
+                  {isAdmin && (
+                    <Button onClick={() => setIsDomainFormOpen(true)} className="gradient-innovation">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Domain
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {domainsLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                    </div>
+                  ) : domains.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Palette className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No domains found. Create your first domain!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
                     {domains.map((domain) => (
                       <div
                         key={domain.id}
@@ -648,39 +672,41 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
           {/* Gallery Tab */}
-          <TabsContent value="gallery">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Image className="w-5 h-5" />
-                    Gallery Management
-                  </CardTitle>
-                  <CardDescription>
-                    Manage photos from IIC events and activities.
-                  </CardDescription>
-                </div>
-                {canManageContent && (
-                  <Button onClick={() => setIsGalleryFormOpen(true)} className="gradient-innovation">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Image
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                {galleryLoading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          {(isAdmin || isModerator) && (
+            <TabsContent value="gallery">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Image className="w-5 h-5" />
+                      Gallery Management
+                    </CardTitle>
+                    <CardDescription>
+                      Manage photos from IIC events and activities.
+                    </CardDescription>
                   </div>
-                ) : !galleryImages || galleryImages.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Image className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No gallery images found. Add your first image!</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {canManageContent && (
+                    <Button onClick={() => setIsGalleryFormOpen(true)} className="gradient-innovation">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Image
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {galleryLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                    </div>
+                  ) : !galleryImages || galleryImages.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Image className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No gallery images found. Add your first image!</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {galleryImages.map((image) => (
                       <div key={image.id} className="group relative aspect-square rounded-lg overflow-hidden bg-muted">
                         <img
@@ -734,6 +760,27 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
+
+          {/* Submissions Tab */}
+          {(isAdmin || isModerator) && (
+            <TabsContent value="submissions">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" />
+                    Submissions & Requests
+                  </CardTitle>
+                  <CardDescription>
+                    Review and manage team join requests, idea submissions, and contact messages.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SubmissionsManagement />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Users Tab - Admin Only */}
           {isAdmin && (

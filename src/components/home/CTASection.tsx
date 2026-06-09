@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 export function CTASection() {
+  const { user } = useAuth();
   return (
     <section className="py-24 relative overflow-hidden">
       {/* Background */}
@@ -34,12 +36,21 @@ export function CTASection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/auth?tab=signup">
-              <Button size="lg" className="gradient-innovation text-accent-foreground border-0 shadow-lg hover:shadow-xl transition-all group px-8">
-                Join IIC Now
-                <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            {!user ? (
+              <Link to="/auth?tab=signup">
+                <Button size="lg" className="gradient-innovation text-accent-foreground border-0 shadow-lg hover:shadow-xl transition-all group px-8">
+                  Join IIC Now
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/dashboard">
+                <Button size="lg" className="gradient-innovation text-accent-foreground border-0 shadow-lg hover:shadow-xl transition-all group px-8">
+                  Go to Dashboard
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            )}
             <Link to="/events">
               <Button size="lg" variant="outline" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20 backdrop-blur-sm px-8">
                 Browse Events

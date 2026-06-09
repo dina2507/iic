@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Seo } from "@/components/Seo";
 
 const Events = () => {
   const { user } = useAuth();
@@ -80,7 +81,7 @@ const Events = () => {
         window.open(data.registrationLink, '_blank');
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       if (error.message?.includes('duplicate')) {
         toast.error('Already registered for this event');
       } else {
@@ -110,6 +111,7 @@ const Events = () => {
     registerMutation.mutate({ eventId, registrationLink });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const EventCard = ({ event, isPast = false }: { event: any; isPast?: boolean }) => (
     <article className="rounded-2xl overflow-hidden bg-card border border-border hover:border-accent/50 hover:shadow-xl transition-all group">
       <Link to={`/events/${event.id}`} className="block">
@@ -131,7 +133,7 @@ const Events = () => {
             <div className="absolute inset-0 bg-background/20 flex items-center justify-center">
               <Badge className="bg-muted text-muted-foreground border-0 text-sm">
                 <History className="w-3 h-3 mr-1" />
-                Past Event
+                Completed
               </Badge>
             </div>
           )}
@@ -185,6 +187,10 @@ const Events = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo 
+        title="Events"
+        description="Discover upcoming workshops, hackathons, and innovation summits at IIC VIT."
+      />
       <Navbar />
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">

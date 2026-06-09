@@ -17,6 +17,7 @@ import {
   Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Seo } from "@/components/Seo";
 
 // Icon mapping
 const iconMap: Record<string, React.ElementType> = {
@@ -108,6 +109,10 @@ export default function Domains() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo 
+        title="Our Domains"
+        description="Explore the 8 specialized domains of IIC VIT driving innovation."
+      />
       <Navbar />
       
       {/* Hero Section */}

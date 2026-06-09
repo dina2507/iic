@@ -22,10 +22,10 @@ const About = () => {
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
                 Empowering Innovation at{" "}
-                <span className="text-gradient">VIT Chennai</span>
+                <span className="text-gradient">VIT Vellore</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-                The Institution's Innovation Council (IIC) at VIT Chennai is dedicated to fostering 
+                The Institution's Innovation Council (IIC) at VIT Vellore is dedicated to fostering 
                 a culture of innovation, entrepreneurship, and creative problem-solving among students.
               </p>
             </div>
@@ -44,7 +44,7 @@ const About = () => {
                 <h2 className="text-2xl font-bold mb-4">Our Mission</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
                   To create a vibrant ecosystem that nurtures innovative thinking and entrepreneurial 
-                  mindset among students, faculty, and staff of VIT Chennai.
+                  mindset among students, faculty, and staff of VIT Vellore.
                 </p>
                 <ul className="space-y-3 text-muted-foreground">
                   <li className="flex items-start gap-3">
@@ -79,7 +79,7 @@ const About = () => {
                 <ul className="space-y-3 text-muted-foreground">
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 rounded-full bg-accent mt-2 flex-shrink-0" />
-                    Establish VIT Chennai as a center of innovation excellence
+                    Establish VIT Vellore as a center of innovation excellence
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-2 h-2 rounded-full bg-accent mt-2 flex-shrink-0" />
@@ -110,7 +110,7 @@ const About = () => {
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">The IIC Story</h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
-                  From humble beginnings to becoming a thriving innovation ecosystem at VIT Chennai.
+                  From humble beginnings to becoming a thriving innovation ecosystem at VIT Vellore.
                 </p>
               </div>
 
@@ -125,7 +125,7 @@ const About = () => {
                   <div className="glass-card p-6 rounded-xl flex-1">
                     <h3 className="text-xl font-bold mb-2">Foundation</h3>
                     <p className="text-muted-foreground">
-                      IIC VIT Chennai was established under the Ministry of Education's Innovation Cell 
+                      IIC VIT Vellore was established under the Ministry of Education's Innovation Cell 
                       initiative to promote innovation and entrepreneurship among students. The council 
                       began with a small team of dedicated faculty and student volunteers.
                     </p>
@@ -142,7 +142,7 @@ const About = () => {
                   <div className="glass-card p-6 rounded-xl flex-1">
                     <h3 className="text-xl font-bold mb-2">Growth & Recognition</h3>
                     <p className="text-muted-foreground">
-                      Despite the pandemic challenges, IIC VIT Chennai pivoted to virtual events and 
+                      Despite the pandemic challenges, IIC VIT Vellore pivoted to virtual events and 
                       workshops, reaching a wider audience. The council received recognition for its 
                       innovative approach to online engagement and student development.
                     </p>
@@ -175,7 +175,7 @@ const About = () => {
                   <div className="glass-card p-6 rounded-xl flex-1 border-2 border-primary/20">
                     <h3 className="text-xl font-bold mb-2">Present Day</h3>
                     <p className="text-muted-foreground">
-                      Today, IIC VIT Chennai stands as a thriving community of innovators, with 8 
+                      Today, IIC VIT Vellore stands as a thriving community of innovators, with 8 
                       specialized domains, regular events, and a strong network of mentors and 
                       industry connections. We continue to inspire and support the next generation 
                       of innovators and entrepreneurs.
@@ -193,7 +193,7 @@ const About = () => {
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Core Values</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                The principles that guide everything we do at IIC VIT Chennai.
+                The principles that guide everything we do at IIC VIT Vellore.
               </p>
             </div>
 

@@ -5,20 +5,41 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { Suspense, lazy } from "react";
+import { Loader2 } from "lucide-react";
+
+// Eagerly loaded pages (critical path)
 import Index from "./pages/Index";
-import About from "./pages/About";
-import Events from "./pages/Events";
-import EventDetails from "./pages/EventDetails";
-import Members from "./pages/Members";
-import Domains from "./pages/Domains";
 import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
-import Startup from "./pages/Startup";
 import NotFound from "./pages/NotFound";
 
+// Lazy-loaded pages (code-split)
+const About = lazy(() => import("./pages/About"));
+const Events = lazy(() => import("./pages/Events"));
+const EventDetails = lazy(() => import("./pages/EventDetails"));
+const Members = lazy(() => import("./pages/Members"));
+const Domains = lazy(() => import("./pages/Domains"));
+const Startup = lazy(() => import("./pages/Startup"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Contact = lazy(() => import("./pages/Contact"));
+
 const queryClient = new QueryClient();
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -27,34 +48,41 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/events/:id" element={<EventDetails />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/domains" element={<Domains />} />
-            <Route path="/startup" element={<Startup />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/admin" 
-              element={
-                <ProtectedRoute requireModerator>
-                  <Admin />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/events" element={<Events />} />
+                <Route path="/events/:id" element={<EventDetails />} />
+                <Route path="/members" element={<Members />} />
+                <Route path="/domains" element={<Domains />} />
+                <Route path="/startup" element={<Startup />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute requireDomainAdmin>
+                      <Admin />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>

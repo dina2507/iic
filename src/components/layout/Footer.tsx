@@ -8,6 +8,7 @@ const footerLinks = {
     { label: "Events", href: "/events" },
     { label: "Domains", href: "/domains" },
     { label: "Members", href: "/members" },
+    { label: "Contact", href: "/contact" },
   ],
   domains: [
     { label: "Events", href: "/domains#events" },
@@ -35,13 +36,13 @@ export function Footer() {
               Fostering innovation and entrepreneurship among students at VIT University through workshops, events, and mentorship programs.
             </p>
             <div className="flex items-center gap-3">
-              <a href="#" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors">
+              <a href="https://www.instagram.com/iicvit/" target="_blank" rel="noopener noreferrer" aria-label="Follow IIC VIT on Instagram" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors">
+              <a href="https://www.linkedin.com/company/iicvit/" target="_blank" rel="noopener noreferrer" aria-label="Follow IIC VIT on LinkedIn" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors">
                 <Linkedin className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors">
+              <a href="https://twitter.com/IICVIT" target="_blank" rel="noopener noreferrer" aria-label="Follow IIC VIT on Twitter" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-primary-foreground/20 transition-colors">
                 <Twitter className="w-5 h-5" />
               </a>
             </div>

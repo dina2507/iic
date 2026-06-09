@@ -8,6 +8,8 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isModerator: boolean;
+  isDomainAdmin: boolean;
+  isStudentMember: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
@@ -22,6 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
+  const [isDomainAdmin, setIsDomainAdmin] = useState(false);
+  const [isStudentMember, setIsStudentMember] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -38,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setIsAdmin(false);
           setIsModerator(false);
+          setIsDomainAdmin(false);
+          setIsStudentMember(false);
         }
       }
     );
@@ -68,6 +74,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setIsAdmin(false);
       setIsModerator(false);
+    }
+
+    const { data: domainRoles, error: domainError } = await supabase
+      .from("user_domain_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .in("role", ["head", "coordinator"]);
+    
+    if (!domainError && domainRoles && domainRoles.length > 0) {
+      setIsDomainAdmin(true);
+    } else {
+      setIsDomainAdmin(false);
+    }
+
+    const { data: studentMember, error: studentError } = await supabase
+      .from("student_members")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!studentError && studentMember) {
+      setIsStudentMember(true);
+    } else {
+      setIsStudentMember(false);
     }
   };
 
@@ -112,10 +142,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setIsAdmin(false);
     setIsModerator(false);
+    setIsDomainAdmin(false);
+    setIsStudentMember(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, isModerator, signUp, signIn, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isModerator, isDomainAdmin, isStudentMember, signUp, signIn, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

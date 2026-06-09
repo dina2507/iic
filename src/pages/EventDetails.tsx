@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Seo } from "@/components/Seo";
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -73,7 +74,7 @@ const EventDetails = () => {
         window.open(data.registrationLink, '_blank');
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       if (error.message?.includes('duplicate')) {
         toast.error('Already registered for this event');
       } else {
@@ -121,6 +122,7 @@ const EventDetails = () => {
   if (!event) {
     return (
       <div className="min-h-screen bg-background">
+        <Seo title="Event Not Found" description="The requested event does not exist." />
         <Navbar />
         <main className="pt-24 pb-16">
           <div className="container mx-auto px-4 text-center">
@@ -139,8 +141,28 @@ const EventDetails = () => {
     );
   }
 
+  const eventJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": event.title,
+    "description": event.description || "No description provided.",
+    "startDate": new Date(`${event.date}T${event.time || '00:00'}`).toISOString(),
+    "location": {
+      "@type": "Place",
+      "name": event.venue || "VIT University, Vellore",
+      "address": "VIT University, Vellore, Tamil Nadu 632014"
+    },
+    "image": event.image_url ? [event.image_url] : []
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <Seo 
+        title={event.title}
+        description={event.description?.substring(0, 160) || `Join us for ${event.title} at IIC VIT.`}
+        ogImage={event.image_url || undefined}
+        jsonLd={eventJsonLd}
+      />
       <Navbar />
       <main className="pt-16">
         {/* Hero Image Section */}
@@ -175,7 +197,7 @@ const EventDetails = () => {
             )}
             {isPastEvent && (
               <Badge className="bg-muted text-muted-foreground border-0 text-sm px-4 py-1">
-                Past Event
+                Completed
               </Badge>
             )}
           </div>

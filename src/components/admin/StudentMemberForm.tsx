@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +17,23 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+const studentMemberSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be at most 100 characters"),
+  role: z.string().min(2, "Role must be at least 2 characters").max(100, "Role must be at most 100 characters"),
+  domain: z.string().optional(),
+  domain_role: z.enum(["head", "coordinator", "member"], { required_error: "Select a designation" }),
+  image_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  linkedin_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  whatsapp_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  display_order: z.number().min(0, "Display order must be 0 or greater"),
+  is_core_member: z.boolean(),
+  is_active: z.boolean(),
+});
+
+type StudentMemberFormData = z.infer<typeof studentMemberSchema>;
 
 interface StudentMember {
   id: string;
@@ -47,17 +67,21 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [domainOptions, setDomainOptions] = useState<string[]>([]);
-  const [formData, setFormData] = useState({
-    name: member?.name || "",
-    role: member?.role || "",
-    domain: member?.domain || "",
-    domain_role: member?.domain_role || "member",
-    image_url: member?.image_url || "",
-    linkedin_url: member?.linkedin_url || "",
-    whatsapp_url: member?.whatsapp_url || "",
-    display_order: member?.display_order || 0,
-    is_active: member?.is_active ?? true,
-    is_core_member: member?.is_core_member ?? false,
+
+  const form = useForm<StudentMemberFormData>({
+    resolver: zodResolver(studentMemberSchema),
+    defaultValues: {
+      name: member?.name || "",
+      role: member?.role || "",
+      domain: member?.domain || "",
+      domain_role: (member?.domain_role as "head" | "coordinator" | "member") || "member",
+      image_url: member?.image_url || "",
+      linkedin_url: member?.linkedin_url || "",
+      whatsapp_url: member?.whatsapp_url || "",
+      display_order: member?.display_order || 0,
+      is_active: member?.is_active ?? true,
+      is_core_member: member?.is_core_member ?? false,
+    },
   });
 
   useEffect(() => {
@@ -75,6 +99,16 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be less than 5MB", variant: "destructive" });
+      return;
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      toast({ title: "Invalid file type", description: "Only JPEG, PNG, WebP, and GIF images are allowed", variant: "destructive" });
+      return;
+    }
+
     setIsUploading(true);
     const fileExt = file.name.split(".").pop();
     const fileName = `student-${Date.now()}.${fileExt}`;
@@ -90,25 +124,24 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
     }
 
     const { data: urlData } = supabase.storage.from("event-images").getPublicUrl(fileName);
-    setFormData((prev) => ({ ...prev, image_url: urlData.publicUrl }));
+    form.setValue("image_url", urlData.publicUrl);
     setIsUploading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: StudentMemberFormData) => {
     setIsLoading(true);
 
     const payload = {
-      name: formData.name,
-      role: formData.role,
-      domain: formData.domain || null,
-      domain_role: formData.domain_role || "member",
-      image_url: formData.image_url || null,
-      linkedin_url: formData.linkedin_url || null,
-      whatsapp_url: formData.whatsapp_url || null,
-      display_order: formData.display_order,
-      is_active: formData.is_active,
-      is_core_member: formData.is_core_member,
+      name: data.name,
+      role: data.role,
+      domain: data.domain || null,
+      domain_role: data.domain_role || "member",
+      image_url: data.image_url || null,
+      linkedin_url: data.linkedin_url || null,
+      whatsapp_url: data.whatsapp_url || null,
+      display_order: data.display_order,
+      is_active: data.is_active,
+      is_core_member: data.is_core_member,
     };
 
     let error;
@@ -136,26 +169,28 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Name *</Label>
           <Input
             id="name"
-            value={formData.name}
-            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-            required
+            {...form.register("name")}
           />
+          {form.formState.errors.name && (
+            <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="role">Role *</Label>
           <Input
             id="role"
-            value={formData.role}
-            onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
+            {...form.register("role")}
             placeholder="e.g., President, Domain Lead"
-            required
           />
+          {form.formState.errors.role && (
+            <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
+          )}
         </div>
       </div>
 
@@ -163,9 +198,9 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
         <div className="space-y-2">
           <Label htmlFor="domain">Domain</Label>
           <Select
-            value={formData.domain || "none"}
+            value={form.watch("domain") || "none"}
             onValueChange={(value) =>
-              setFormData((prev) => ({ ...prev, domain: value === "none" ? "" : value }))
+              form.setValue("domain", value === "none" ? "" : value)
             }
           >
             <SelectTrigger id="domain">
@@ -184,8 +219,8 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
         <div className="space-y-2">
           <Label htmlFor="domain_role">Designation</Label>
           <Select
-            value={formData.domain_role}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, domain_role: value }))}
+            value={form.watch("domain_role")}
+            onValueChange={(value: "head" | "coordinator" | "member") => form.setValue("domain_role", value)}
           >
             <SelectTrigger id="domain_role">
               <SelectValue placeholder="Select designation" />
@@ -198,6 +233,9 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
               ))}
             </SelectContent>
           </Select>
+          {form.formState.errors.domain_role && (
+            <p className="text-sm text-destructive">{form.formState.errors.domain_role.message}</p>
+          )}
         </div>
       </div>
 
@@ -206,13 +244,12 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
         <div className="flex gap-2">
           <Input
             id="image_url"
-            value={formData.image_url}
-            onChange={(e) => setFormData((prev) => ({ ...prev, image_url: e.target.value }))}
+            {...form.register("image_url")}
             placeholder="Image URL"
             className="flex-1"
           />
           <label className="cursor-pointer">
-            <Input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            <Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageUpload} />
             <Button type="button" variant="outline" disabled={isUploading} asChild>
               <span>
                 {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -220,8 +257,11 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
             </Button>
           </label>
         </div>
-        {formData.image_url && (
-          <img src={formData.image_url} alt="Preview" className="w-20 h-20 rounded-full object-cover mt-2" />
+        {form.formState.errors.image_url && (
+          <p className="text-sm text-destructive">{form.formState.errors.image_url.message}</p>
+        )}
+        {form.watch("image_url") && (
+          <img src={form.watch("image_url")} alt="Preview" className="w-20 h-20 rounded-full object-cover mt-2" />
         )}
       </div>
 
@@ -230,19 +270,23 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
           <Label htmlFor="linkedin">LinkedIn URL</Label>
           <Input
             id="linkedin"
-            value={formData.linkedin_url}
-            onChange={(e) => setFormData((prev) => ({ ...prev, linkedin_url: e.target.value }))}
+            {...form.register("linkedin_url")}
             placeholder="https://linkedin.com/in/..."
           />
+          {form.formState.errors.linkedin_url && (
+            <p className="text-sm text-destructive">{form.formState.errors.linkedin_url.message}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="whatsapp">WhatsApp URL</Label>
           <Input
             id="whatsapp"
-            value={formData.whatsapp_url}
-            onChange={(e) => setFormData((prev) => ({ ...prev, whatsapp_url: e.target.value }))}
+            {...form.register("whatsapp_url")}
             placeholder="https://wa.me/..."
           />
+          {form.formState.errors.whatsapp_url && (
+            <p className="text-sm text-destructive">{form.formState.errors.whatsapp_url.message}</p>
+          )}
         </div>
       </div>
 
@@ -252,23 +296,25 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
           <Input
             id="display_order"
             type="number"
-            value={formData.display_order}
-            onChange={(e) => setFormData((prev) => ({ ...prev, display_order: parseInt(e.target.value) || 0 }))}
+            {...form.register("display_order", { valueAsNumber: true })}
           />
+          {form.formState.errors.display_order && (
+            <p className="text-sm text-destructive">{form.formState.errors.display_order.message}</p>
+          )}
         </div>
         <div className="flex items-center gap-2 pt-6">
           <Switch
             id="is_core_member"
-            checked={formData.is_core_member}
-            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_core_member: checked }))}
+            checked={form.watch("is_core_member")}
+            onCheckedChange={(checked) => form.setValue("is_core_member", checked)}
           />
           <Label htmlFor="is_core_member">Core Member</Label>
         </div>
         <div className="flex items-center gap-2 pt-6">
           <Switch
             id="is_active"
-            checked={formData.is_active}
-            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, is_active: checked }))}
+            checked={form.watch("is_active")}
+            onCheckedChange={(checked) => form.setValue("is_active", checked)}
           />
           <Label htmlFor="is_active">Active</Label>
         </div>

@@ -1,28 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import "./startup.css";
-
-const stats: [string, string][] = [
-  ["50+", "Events hosted"],
-  ["20+", "Startups mentored"],
-  ["5K+", "Students engaged"],
-  ["8", "Student domains"],
-];
-
-const domains: [string, string][] = [
-  ["Innovation", "Idea validation, design thinking, prototypes, and YUKTI-ready student innovation pipelines."],
-  ["Startup", "Mentor circles, pitch reviews, founder clinics, and incubation support for campus ventures."],
-  ["IPR", "Patent literacy, prior-art search sessions, copyrights, trademarks, and protection strategy."],
-  ["Industry Connect", "Founder talks, expert panels, company challenges, and real-world problem statements."],
-];
-
-const startups: [string, string, string][] = [
-  ["N", "Nimbus", "Cloud Ops"],
-  ["V", "Verdant", "Agritech"],
-  ["P", "Pulse", "Healthtech"],
-  ["F", "Forge", "Hardware"],
-  ["L", "Lumen", "Edtech"],
-];
 
 interface TeamMember {
   id: string;
@@ -58,6 +40,29 @@ const getInitials = (name: string) =>
 const formatEventDate = (date: string) =>
   new Date(date).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 
+// --- Zod Schemas ---
+
+const joinSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be at most 100 characters"),
+  email: z
+    .string()
+    .email("Must be a valid email")
+    .refine((val) => val.endsWith("@vitstudent.ac.in"), {
+      message: "Must be a VIT student email (@vitstudent.ac.in)",
+    }),
+  reason: z.string().min(10, "Reason must be at least 10 characters").max(500, "Reason must be at most 500 characters"),
+});
+
+type JoinFormData = z.infer<typeof joinSchema>;
+
+const ideaSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be at most 100 characters"),
+  email: z.string().email("Must be a valid email"),
+  idea: z.string().min(20, "Idea must be at least 20 characters").max(1000, "Idea must be at most 1000 characters"),
+});
+
+type IdeaFormData = z.infer<typeof ideaSchema>;
+
 interface StartupContentProps {
   domainName: string;
   slug: string;
@@ -67,6 +72,8 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [events, setEvents] = useState<DomainEvent[]>([]);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+  const [isJoinSubmitting, setIsJoinSubmitting] = useState(false);
+  const [isIdeaSubmitting, setIsIdeaSubmitting] = useState(false);
 
   // Order: Head, then Coordinator, then everyone else.
   const orderedMembers = useMemo(() => {
@@ -150,6 +157,54 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
     return () => observer.disconnect();
   }, [orderedMembers.length, events.length]);
 
+  // --- Join Form ---
+  const joinForm = useForm<JoinFormData>({
+    resolver: zodResolver(joinSchema),
+    defaultValues: { name: "", email: "", reason: "" },
+  });
+
+  const handleJoinSubmit = async (data: JoinFormData) => {
+    setIsJoinSubmitting(true);
+    try {
+      const { error } = await supabase.from("join_requests").insert({
+        name: data.name,
+        email: data.email,
+        reason: data.reason,
+      });
+      if (error) throw error;
+      toast.success("Your application has been submitted!");
+      joinForm.reset();
+    } catch (error: unknown) {
+      toast.error((error as Error).message || "Something went wrong. Please try again.");
+    } finally {
+      setIsJoinSubmitting(false);
+    }
+  };
+
+  // --- Idea Form ---
+  const ideaForm = useForm<IdeaFormData>({
+    resolver: zodResolver(ideaSchema),
+    defaultValues: { name: "", email: "", idea: "" },
+  });
+
+  const handleIdeaSubmit = async (data: IdeaFormData) => {
+    setIsIdeaSubmitting(true);
+    try {
+      const { error } = await supabase.from("idea_submissions").insert({
+        name: data.name,
+        email: data.email,
+        idea: data.idea,
+      });
+      if (error) throw error;
+      toast.success("Your idea has been submitted!");
+      ideaForm.reset();
+    } catch (error: unknown) {
+      toast.error((error as Error).message || "Something went wrong. Please try again.");
+    } finally {
+      setIsIdeaSubmitting(false);
+    }
+  };
+
   return (
     <div className="startup-domain">
       {/* Hero */}
@@ -181,15 +236,6 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
           <div className="sd-orbit sd-orbit-one"></div>
           <div className="sd-orbit sd-orbit-two"></div>
         </div>
-
-        <div className="sd-stats-strip" data-reveal>
-          {stats.map(([number, label]) => (
-            <div className="sd-stat" key={label}>
-              <strong>{number}</strong>
-              <span>{label}</span>
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* About */}
@@ -210,23 +256,6 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
             industry experts, and student leads work together to keep the ecosystem
             accountable and useful.
           </div>
-        </div>
-      </section>
-
-      {/* Domains */}
-      <section className="sd-section sd-civic-band" id="sd-domains">
-        <div className="sd-section-heading" data-reveal>
-          <p className="sd-section-kicker">Council Work</p>
-          <h2>Programs that make innovation repeatable.</h2>
-        </div>
-        <div className="sd-domain-grid">
-          {domains.map(([title, copy], index) => (
-            <article className="sd-domain-card" data-reveal key={title}>
-              <span>0{index + 1}</span>
-              <h3>{title}</h3>
-              <p>{copy}</p>
-            </article>
-          ))}
         </div>
       </section>
 
@@ -283,23 +312,6 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
         )}
       </section>
 
-      {/* Portfolio */}
-      <section className="sd-section sd-portfolio-section">
-        <div className="sd-section-heading" data-reveal>
-          <p className="sd-section-kicker">Portfolio</p>
-          <h2>Startups we have helped get off the ground.</h2>
-        </div>
-        <div className="sd-startup-grid" data-reveal>
-          {startups.map(([initial, name, sector], index) => (
-            <article className={`sd-startup sd-startup-${index}`} key={name}>
-              <span className="sd-avatar">{initial}</span>
-              <h3>{name}</h3>
-              <p>{sector}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       {/* Events */}
       <section className="sd-section sd-events-section" id="sd-events">
         <div className="sd-section-heading" data-reveal>
@@ -327,27 +339,87 @@ export function StartupContent({ domainName, slug }: StartupContentProps) {
 
       {/* Join form */}
       <div className="sd-form-zone" id="sd-join">
-        <form className="sd-form" data-reveal onSubmit={(e) => e.preventDefault()}>
+        <form className="sd-form" data-reveal onSubmit={joinForm.handleSubmit(handleJoinSubmit)}>
           <span className="sd-pill">Join the team</span>
           <h2>Build IIC with us.</h2>
           <p>Recruitment opens twice a year. Drop your details and we will reach out when applications go live.</p>
-          <input aria-label="Full name" placeholder="Full name" />
-          <input aria-label="VIT email" placeholder="VIT email" type="email" />
-          <input aria-label="Reason to join" placeholder="Why do you want to join?" />
-          <button type="submit">Join us</button>
+          <div>
+            <input
+              aria-label="Full name"
+              placeholder="Full name"
+              {...joinForm.register("name")}
+            />
+            {joinForm.formState.errors.name && (
+              <p className="text-sm" style={{ color: "#ef4444", marginTop: "0.25rem" }}>{joinForm.formState.errors.name.message}</p>
+            )}
+          </div>
+          <div>
+            <input
+              aria-label="VIT email"
+              placeholder="VIT email"
+              type="email"
+              {...joinForm.register("email")}
+            />
+            {joinForm.formState.errors.email && (
+              <p className="text-sm" style={{ color: "#ef4444", marginTop: "0.25rem" }}>{joinForm.formState.errors.email.message}</p>
+            )}
+          </div>
+          <div>
+            <input
+              aria-label="Reason to join"
+              placeholder="Why do you want to join?"
+              {...joinForm.register("reason")}
+            />
+            {joinForm.formState.errors.reason && (
+              <p className="text-sm" style={{ color: "#ef4444", marginTop: "0.25rem" }}>{joinForm.formState.errors.reason.message}</p>
+            )}
+          </div>
+          <button type="submit" disabled={isJoinSubmitting}>
+            {isJoinSubmitting ? "Submitting..." : "Join us"}
+          </button>
         </form>
       </div>
 
       {/* Idea form */}
       <div className="sd-idea-zone" id="sd-idea">
-        <form className="sd-form" data-reveal onSubmit={(e) => e.preventDefault()}>
+        <form className="sd-form" data-reveal onSubmit={ideaForm.handleSubmit(handleIdeaSubmit)}>
           <span className="sd-pill">Share your idea</span>
           <h2>Got a startup idea?</h2>
           <p>Pitch us in two lines. If we see a spark, we will loop in a mentor and help you take the next step.</p>
-          <input aria-label="Your name" placeholder="Your name" />
-          <input aria-label="Email" placeholder="Email" type="email" />
-          <textarea aria-label="Startup idea" placeholder="Describe your idea in 2-3 lines..." />
-          <button type="submit">Share your idea</button>
+          <div>
+            <input
+              aria-label="Your name"
+              placeholder="Your name"
+              {...ideaForm.register("name")}
+            />
+            {ideaForm.formState.errors.name && (
+              <p className="text-sm" style={{ color: "#ef4444", marginTop: "0.25rem" }}>{ideaForm.formState.errors.name.message}</p>
+            )}
+          </div>
+          <div>
+            <input
+              aria-label="Email"
+              placeholder="Email"
+              type="email"
+              {...ideaForm.register("email")}
+            />
+            {ideaForm.formState.errors.email && (
+              <p className="text-sm" style={{ color: "#ef4444", marginTop: "0.25rem" }}>{ideaForm.formState.errors.email.message}</p>
+            )}
+          </div>
+          <div>
+            <textarea
+              aria-label="Startup idea"
+              placeholder="Describe your idea in 2-3 lines..."
+              {...ideaForm.register("idea")}
+            />
+            {ideaForm.formState.errors.idea && (
+              <p className="text-sm" style={{ color: "#ef4444", marginTop: "0.25rem" }}>{ideaForm.formState.errors.idea.message}</p>
+            )}
+          </div>
+          <button type="submit" disabled={isIdeaSubmitting}>
+            {isIdeaSubmitting ? "Submitting..." : "Share your idea"}
+          </button>
         </form>
       </div>
     </div>

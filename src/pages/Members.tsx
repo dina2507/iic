@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { Seo } from "@/components/Seo";
 
 interface FacultyMember {
   id: string;
@@ -91,6 +92,10 @@ const Members = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo 
+        title="Our Team"
+        description="Meet the faculty and student members of the Institution's Innovation Council."
+      />
       <Navbar />
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">

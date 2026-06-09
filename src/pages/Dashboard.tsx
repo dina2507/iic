@@ -15,8 +15,16 @@ import {
   CalendarDays,
   MapPin,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Phone,
+  Github,
+  Linkedin,
+  Twitter,
+  Instagram,
+  FileText,
+  Upload
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +42,14 @@ import { Footer } from "@/components/layout/Footer";
 const profileSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   avatar_url: z.string().url("Invalid URL").optional().or(z.literal("")),
+  phone_number: z.string().max(15, "Phone number is too long").optional(),
+  about: z.string().max(500, "About section must be 500 characters or less").optional(),
+  social_links: z.object({
+    linkedin: z.string().url("Invalid URL").optional().or(z.literal("")),
+    github: z.string().url("Invalid URL").optional().or(z.literal("")),
+    twitter: z.string().url("Invalid URL").optional().or(z.literal("")),
+    instagram: z.string().url("Invalid URL").optional().or(z.literal("")),
+  }).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -60,8 +76,61 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, isStudentMember } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be less than 2MB", variant: "destructive" });
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast({ title: "Invalid file type", description: "Only JPEG, PNG, and WebP images are allowed", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+      setIsUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
+    const newAvatarUrl = urlData.publicUrl;
+
+    // Update profiles table
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ avatar_url: newAvatarUrl })
+      .eq("id", user.id);
+
+    // Update student_members table (if they exist there)
+    await supabase
+      .from("student_members")
+      .update({ image_url: newAvatarUrl })
+      .eq("user_id", user.id);
+
+    if (!profileError) {
+      toast({ title: "Success", description: "Avatar updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      // Also invalidate team members query if it exists somewhere else
+    }
+
+    setIsUploading(false);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -122,6 +191,14 @@ export default function Dashboard() {
     defaultValues: {
       full_name: profile?.full_name || "",
       avatar_url: profile?.avatar_url || "",
+      phone_number: profile?.phone_number || "",
+      about: profile?.about || "",
+      social_links: {
+        linkedin: (profile?.social_links as any)?.linkedin || "",
+        github: (profile?.social_links as any)?.github || "",
+        twitter: (profile?.social_links as any)?.twitter || "",
+        instagram: (profile?.social_links as any)?.instagram || "",
+      }
     },
   });
 
@@ -130,6 +207,14 @@ export default function Dashboard() {
       form.reset({
         full_name: profile.full_name || "",
         avatar_url: profile.avatar_url || "",
+        phone_number: profile.phone_number || "",
+        about: profile.about || "",
+        social_links: {
+          linkedin: (profile.social_links as any)?.linkedin || "",
+          github: (profile.social_links as any)?.github || "",
+          twitter: (profile.social_links as any)?.twitter || "",
+          instagram: (profile.social_links as any)?.instagram || "",
+        }
       });
     }
   }, [profile, form]);
@@ -142,6 +227,9 @@ export default function Dashboard() {
         .update({
           full_name: data.full_name,
           avatar_url: data.avatar_url || null,
+          phone_number: data.phone_number || null,
+          about: data.about || null,
+          social_links: data.social_links as any,
         })
         .eq("id", user.id);
       if (error) throw error;
@@ -218,12 +306,20 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <Avatar className="w-16 h-16 border-2 border-accent">
-                <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || ""} />
-                <AvatarFallback className="text-lg bg-accent/20">
-                  {getInitials(profile?.full_name)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group rounded-full overflow-hidden w-16 h-16 border-2 border-accent flex-shrink-0">
+                <Avatar className="w-full h-full rounded-none">
+                  <AvatarImage src={profile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || ""} alt={profile?.full_name || ""} className="object-cover" />
+                  <AvatarFallback className="text-lg bg-accent/20 rounded-none">
+                    {getInitials(profile?.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                {isStudentMember && (
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity" title="Upload Avatar">
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} disabled={isUploading} />
+                    {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
+                  </label>
+                )}
+              </div>
               <div>
                 <h1 className="text-2xl font-bold">{profile?.full_name || "User"}</h1>
                 <p className="text-muted-foreground">{user.email}</p>
@@ -410,16 +506,84 @@ export default function Dashboard() {
                         )}
                       </div>
 
+
+
                       <div className="space-y-2">
-                        <Label htmlFor="avatar_url">Avatar URL</Label>
+                        <Label htmlFor="phone_number">Phone Number</Label>
                         <Input
-                          id="avatar_url"
-                          {...form.register("avatar_url")}
-                          placeholder="https://example.com/avatar.jpg"
+                          id="phone_number"
+                          {...form.register("phone_number")}
+                          placeholder="+1 234 567 890"
                         />
-                        {form.formState.errors.avatar_url && (
-                          <p className="text-sm text-destructive">{form.formState.errors.avatar_url.message}</p>
+                        {form.formState.errors.phone_number && (
+                          <p className="text-sm text-destructive">{form.formState.errors.phone_number.message}</p>
                         )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="about">About You</Label>
+                          <span className="text-xs text-muted-foreground">
+                            {form.watch("about")?.length || 0}/500
+                          </span>
+                        </div>
+                        <Textarea
+                          id="about"
+                          {...form.register("about")}
+                          placeholder="Tell us a bit about yourself..."
+                          className="resize-none h-24"
+                        />
+                        {form.formState.errors.about && (
+                          <p className="text-sm text-destructive">{form.formState.errors.about.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-4 border rounded-md p-4 bg-muted/20">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                          <FileText className="w-4 h-4" /> Social Profiles
+                        </h4>
+                        
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="linkedin" className="flex items-center gap-2">
+                              <Linkedin className="w-3 h-3" /> LinkedIn
+                            </Label>
+                            <Input id="linkedin" {...form.register("social_links.linkedin")} placeholder="https://linkedin.com/in/..." />
+                            {form.formState.errors.social_links?.linkedin && (
+                              <p className="text-xs text-destructive">{form.formState.errors.social_links.linkedin.message}</p>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="github" className="flex items-center gap-2">
+                              <Github className="w-3 h-3" /> GitHub
+                            </Label>
+                            <Input id="github" {...form.register("social_links.github")} placeholder="https://github.com/..." />
+                            {form.formState.errors.social_links?.github && (
+                              <p className="text-xs text-destructive">{form.formState.errors.social_links.github.message}</p>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="twitter" className="flex items-center gap-2">
+                              <Twitter className="w-3 h-3" /> Twitter
+                            </Label>
+                            <Input id="twitter" {...form.register("social_links.twitter")} placeholder="https://twitter.com/..." />
+                            {form.formState.errors.social_links?.twitter && (
+                              <p className="text-xs text-destructive">{form.formState.errors.social_links.twitter.message}</p>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="instagram" className="flex items-center gap-2">
+                              <Instagram className="w-3 h-3" /> Instagram
+                            </Label>
+                            <Input id="instagram" {...form.register("social_links.instagram")} placeholder="https://instagram.com/..." />
+                            {form.formState.errors.social_links?.instagram && (
+                              <p className="text-xs text-destructive">{form.formState.errors.social_links.instagram.message}</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -451,19 +615,77 @@ export default function Dashboard() {
                     </form>
                   ) : (
                     <div className="space-y-4">
-                      <div>
-                        <Label className="text-muted-foreground">Full Name</Label>
-                        <p className="text-lg">{profile?.full_name || "Not set"}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Email</Label>
-                        <p className="text-lg">{user.email}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Member Since</Label>
-                        <p className="text-lg">
-                          {profile?.created_at ? formatDate(profile.created_at) : "Unknown"}
-                        </p>
+                      <div className="grid gap-6 sm:grid-cols-2">
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-muted-foreground">Full Name</Label>
+                            <p className="text-lg">{profile?.full_name || "Not set"}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Email</Label>
+                            <p className="text-lg">{user.email}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Phone Number</Label>
+                            <p className="text-lg flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-muted-foreground" />
+                              {profile?.phone_number || "Not set"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Member Since</Label>
+                            <p className="text-lg flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-muted-foreground" />
+                              {profile?.created_at ? formatDate(profile.created_at) : "Unknown"}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4 border-l pl-6">
+                          <div>
+                            <Label className="text-muted-foreground">About</Label>
+                            <p className="text-base whitespace-pre-wrap mt-1">
+                              {profile?.about || "No description provided."}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-muted-foreground mb-2 block">Social Profiles</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {(profile?.social_links as any)?.linkedin && (
+                                <Button size="sm" variant="outline" asChild className="gap-2">
+                                  <a href={(profile?.social_links as any).linkedin} target="_blank" rel="noreferrer">
+                                    <Linkedin className="w-3 h-3" /> LinkedIn
+                                  </a>
+                                </Button>
+                              )}
+                              {(profile?.social_links as any)?.github && (
+                                <Button size="sm" variant="outline" asChild className="gap-2">
+                                  <a href={(profile?.social_links as any).github} target="_blank" rel="noreferrer">
+                                    <Github className="w-3 h-3" /> GitHub
+                                  </a>
+                                </Button>
+                              )}
+                              {(profile?.social_links as any)?.twitter && (
+                                <Button size="sm" variant="outline" asChild className="gap-2">
+                                  <a href={(profile?.social_links as any).twitter} target="_blank" rel="noreferrer">
+                                    <Twitter className="w-3 h-3" /> Twitter
+                                  </a>
+                                </Button>
+                              )}
+                              {(profile?.social_links as any)?.instagram && (
+                                <Button size="sm" variant="outline" asChild className="gap-2">
+                                  <a href={(profile?.social_links as any).instagram} target="_blank" rel="noreferrer">
+                                    <Instagram className="w-3 h-3" /> Instagram
+                                  </a>
+                                </Button>
+                              )}
+                              {!(profile?.social_links as any)?.linkedin && !(profile?.social_links as any)?.github && !(profile?.social_links as any)?.twitter && !(profile?.social_links as any)?.instagram && (
+                                <p className="text-sm text-muted-foreground italic">No social links added.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
