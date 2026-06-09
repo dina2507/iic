@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Coordinator {
@@ -39,39 +40,41 @@ export function CoordinatorSelect({
 }: CoordinatorSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedCoordinators, setSelectedCoordinators] = useState<Coordinator[]>([]);
 
-  // Fetch all potential coordinators
-  useEffect(() => {
-    const fetchAllCoordinators = async () => {
-      setIsLoading(true);
-      const table = memberType === "faculty" ? "faculty_members" : "student_members";
-      const selectFields = memberType === "faculty" ? "id, name, designation" : "id, name, role";
-      
+  const table = memberType === "faculty" ? "faculty_members" : "student_members";
+  const queryKey = memberType === "faculty" ? ["admin-faculty"] : ["admin-students"];
+
+  // Fetch all potential coordinators using React Query (shares cache with MembersManagement)
+  const { data: coordinators = [], isLoading } = useQuery({
+    queryKey,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from(table as any)
-        .select(selectFields);
+        .select("*")
+        .order("display_order", { ascending: true });
 
-      if (!error && data) {
-        const formattedData = data.map((d: any) => ({
-          id: d.id,
-          name: d.name,
-          designation: memberType === "faculty" ? d.designation : d.role,
-        }));
-        setCoordinators(formattedData);
-        
-        // Sync selected coordinators
-        if (values.length > 0) {
-          setSelectedCoordinators(formattedData.filter(c => values.includes(c.id)));
-        }
+      if (error) {
+        console.error("Error fetching coordinators:", error);
+        return [];
       }
-      setIsLoading(false);
-    };
 
-    fetchAllCoordinators();
-  }, [memberType, values]);
+      return (data || []).map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        designation: memberType === "faculty" ? d.designation : d.role,
+      }));
+    },
+  });
+
+  // Sync selected coordinators
+  useEffect(() => {
+    if (coordinators.length > 0 && values.length > 0) {
+      setSelectedCoordinators(coordinators.filter(c => values.includes(c.id)));
+    } else if (values.length === 0) {
+      setSelectedCoordinators([]);
+    }
+  }, [coordinators, values]);
 
   const filteredCoordinators = coordinators.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
