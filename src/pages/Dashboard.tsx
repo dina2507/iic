@@ -43,11 +43,12 @@ import { Footer } from "@/components/layout/Footer";
 import { MemberProfileForm } from "@/components/member/MemberProfileForm";
 import { EventForm } from "@/components/admin/EventForm";
 import EventRegistrations from "@/components/admin/EventRegistrations";
+import { isPastEvent } from "@/lib/date";
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   avatar_url: z.string().url("Invalid URL").optional().or(z.literal("")),
-  phone_number: z.string().max(15, "Phone number is too long").optional(),
+  phone_number: z.string().max(20, "Phone number is too long").optional(),
   about: z.string().max(500, "About section must be 500 characters or less").optional(),
   social_links: z.object({
     linkedin: z.string().url("Invalid URL").optional().or(z.literal("")),
@@ -308,10 +309,6 @@ export default function Dashboard() {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const isEventPast = (dateStr: string) => {
-    return new Date(dateStr) < new Date();
-  };
-
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -322,8 +319,8 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  const upcomingEvents = registrations?.filter(r => !isEventPast(r.events.date)) || [];
-  const pastEvents = registrations?.filter(r => isEventPast(r.events.date)) || [];
+  const upcomingEvents = registrations?.filter(r => !isPastEvent(r.events.date)) || [];
+  const pastEvents = registrations?.filter(r => isPastEvent(r.events.date)) || [];
 
   return (
     <div className="min-h-screen bg-background">

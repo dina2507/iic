@@ -23,7 +23,6 @@ const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"
 
 const studentMemberSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be at most 100 characters"),
-  role: z.string().optional(),
   domain: z.string().optional(),
   domain_role: z.enum(["head", "coordinator", "member"], { required_error: "Select a role" }),
   phone_number: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
@@ -84,7 +83,6 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
     resolver: zodResolver(studentMemberSchema),
     defaultValues: {
       name: member?.name || "",
-      role: member?.role || "",
       domain: member?.domain || "",
       domain_role: (member?.domain_role as "head" | "coordinator" | "member") || "member",
       phone_number: member?.phone_number || "",

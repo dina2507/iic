@@ -15,9 +15,67 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+const REMEMBER_FLAG = "iic.rememberMe";
+
+/**
+ * Call this BEFORE signing in to choose where the session is persisted:
+ *  - remember = true  -> localStorage (survives browser restarts)
+ *  - remember = false -> sessionStorage (cleared when the tab/browser closes)
+ * This replaces the old (unreliable) `beforeunload` sign-out hack.
+ */
+export function setRememberMe(remember: boolean) {
+  try {
+    localStorage.setItem(REMEMBER_FLAG, remember ? "true" : "false");
+  } catch {
+    /* storage unavailable (private mode) — ignore */
+  }
+}
+
+export function getRememberMe(): boolean {
+  try {
+    return localStorage.getItem(REMEMBER_FLAG) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+// Routes session reads/writes to local- or sessionStorage based on the
+// "remember me" flag, while reading from either on startup so an existing
+// session is always found.
+const hybridStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key) ?? sessionStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (getRememberMe()) {
+        localStorage.setItem(key, value);
+        sessionStorage.removeItem(key);
+      } else {
+        sessionStorage.setItem(key, value);
+        localStorage.removeItem(key);
+      }
+    } catch {
+      /* ignore */
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+  },
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: hybridStorage,
     persistSession: true,
     autoRefreshToken: true,
   }

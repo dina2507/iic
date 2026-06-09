@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, setRememberMe, getRememberMe } from "@/integrations/supabase/client";
 
 // VIT students use @vitstudent.ac.in; faculty/staff use @vit.ac.in.
 const ALLOWED_EMAIL_DOMAINS = ["@vit.ac.in", "@vitstudent.ac.in"];
@@ -58,7 +58,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMeState] = useState(getRememberMe());
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
 
@@ -83,26 +83,11 @@ export default function Auth() {
     }
   }, [user, authLoading, navigate, toast, from, signOut]);
 
-  // Handle session cleanup when browser closes if "Remember me" is unchecked
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const shouldForget = sessionStorage.getItem("forgetSession") === "true";
-      if (shouldForget) {
-        supabase.auth.signOut();
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
-
   const handleRememberMeChange = (checked: boolean) => {
+    setRememberMeState(checked);
+    // Persisted immediately so the choice applies to the session that the
+    // very next sign-in writes (local- vs sessionStorage).
     setRememberMe(checked);
-    if (!checked) {
-      sessionStorage.setItem("forgetSession", "true");
-    } else {
-      sessionStorage.removeItem("forgetSession");
-    }
   };
 
   const loginForm = useForm<LoginFormData>({
@@ -161,11 +146,14 @@ export default function Auth() {
         variant: "destructive",
       });
     } else {
+      // If the project has email confirmation on, no session exists yet and the
+      // auth-state effect won't navigate — the inbox message covers that case.
+      // If confirmation is off, the user is auto-signed-in and that effect
+      // handles the redirect.
       toast({
         title: "Account created!",
-        description: "You can now log in with your credentials.",
+        description: "If a confirmation email is required, check your inbox to finish signing in.",
       });
-      navigate(from, { replace: true });
     }
   };
 

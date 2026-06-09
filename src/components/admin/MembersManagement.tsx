@@ -124,6 +124,16 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
     }
   };
 
+  const handleApproveFaculty = async (id: string) => {
+    const { error } = await supabase.from("faculty_members").update({ is_active: true }).eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to approve faculty member", variant: "destructive" });
+    } else {
+      toast({ title: "Approved", description: "Faculty member has been approved" });
+      queryClient.invalidateQueries({ queryKey: ["admin-faculty"] });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="faculty" className="w-full">
@@ -196,6 +206,17 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
                       </div>
                       {canManageContent && (
                         <div className="flex flex-col gap-1">
+                          {!member.is_active && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleApproveFaculty(member.id)}
+                              title="Approve Member"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"

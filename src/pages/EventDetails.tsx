@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
+import { isPastEvent } from "@/lib/date";
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -112,7 +113,7 @@ const EventDetails = () => {
   });
 
   const isRegistered = registrations?.includes(id || '');
-  const isPastEvent = event ? new Date(event.date) < new Date(new Date().toDateString()) : false;
+  const isEventPast = event ? isPastEvent(event.date) : false;
 
   const handleRegister = () => {
     if (!user) {
@@ -198,7 +199,7 @@ const EventDetails = () => {
           <img 
             src={event.image_url || "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1920&h=1080&fit=crop"} 
             alt={event.title} 
-            className={`w-full h-full object-cover ${isPastEvent ? 'grayscale-[30%]' : ''}`}
+            className={`w-full h-full object-cover ${isEventPast ? 'grayscale-[30%]' : ''}`}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           
@@ -223,7 +224,7 @@ const EventDetails = () => {
                 {event.mode === 'online' ? 'Online' : event.mode === 'hybrid' ? 'Hybrid' : 'Offline'}
               </Badge>
             )}
-            {isPastEvent && (
+            {isEventPast && (
               <Badge className="bg-muted text-muted-foreground border-0 text-sm px-4 py-1">
                 Completed
               </Badge>
@@ -350,7 +351,7 @@ const EventDetails = () => {
                   </div>
 
                   {/* Registration Button */}
-                  {!isPastEvent && (
+                  {!isEventPast && (
                     <div className="pt-4 border-t border-border">
                       {isRegistered ? (
                         <Button className="w-full" variant="outline" disabled>
