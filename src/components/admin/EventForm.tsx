@@ -47,16 +47,18 @@ interface EventFormProps {
   };
   onSuccess: () => void;
   onCancel: () => void;
+  /** When provided (e.g. from Domain Panel), pre-selects these domain IDs for new events */
+  domainIds?: string[];
 }
 
-export function EventForm({ event, onSuccess, onCancel }: EventFormProps) {
+export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(event?.image_url || null);
   const [isUploading, setIsUploading] = useState(false);
   const [domains, setDomains] = useState<{ id: string; name: string }[]>([]);
-  const [selectedDomainIds, setSelectedDomainIds] = useState<string[]>([]);
+  const [selectedDomainIds, setSelectedDomainIds] = useState<string[]>(domainIds && !event?.id ? domainIds : []);
 
   useEffect(() => {
     const loadDomains = async () => {

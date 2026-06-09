@@ -8,15 +8,17 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
   requireModerator?: boolean;
   requireDomainAdmin?: boolean;
+  requireDomainMember?: boolean;
 }
 
 export default function ProtectedRoute({ 
   children, 
   requireAdmin = false,
   requireModerator = false,
-  requireDomainAdmin = false
+  requireDomainAdmin = false,
+  requireDomainMember = false
 }: ProtectedRouteProps) {
-  const { user, loading, isAdmin, isModerator, isDomainAdmin } = useAuth();
+  const { user, loading, isAdmin, isModerator, isDomainAdmin, isDomainMember } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -40,6 +42,10 @@ export default function ProtectedRoute({
   }
 
   if (requireDomainAdmin && !isAdmin && !isModerator && !isDomainAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireDomainMember && !isAdmin && !isModerator && !isDomainAdmin && !isDomainMember) {
     return <Navigate to="/" replace />;
   }
 

@@ -25,6 +25,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 const Admin = lazy(() => import("./pages/Admin"));
+const DomainPanel = lazy(() => import("./pages/DomainPanel"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -84,10 +85,18 @@ const App = () => (
                 <Route
                   path="/admin" 
                   element={
-                    <ProtectedRoute requireDomainAdmin>
+                    <ProtectedRoute requireModerator>
                       <Admin />
                     </ProtectedRoute>
                   } 
+                />
+                <Route
+                  path="/domain-panel"
+                  element={
+                    <ProtectedRoute requireDomainMember>
+                      <DomainPanel />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route path="*" element={<NotFound />} />
               </Routes>

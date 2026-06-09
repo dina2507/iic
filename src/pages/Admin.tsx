@@ -86,8 +86,8 @@ interface GalleryImage {
 export default function Admin() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading: authLoading, isAdmin, isModerator, isDomainAdmin, signOut } = useAuth();
-  const canManageContent = isAdmin || isModerator || isDomainAdmin;
+  const { user, loading: authLoading, isAdmin, isModerator, signOut } = useAuth();
+  const canManageContent = isAdmin || isModerator;
   const [events, setEvents] = useState<Event[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
@@ -314,15 +314,6 @@ export default function Admin() {
             <CardContent className="pt-6">
               <p className="text-blue-600 dark:text-blue-400">
                 ℹ️ You are a moderator. You can manage Events and Gallery but not Domains or Users.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-        {isDomainAdmin && !isAdmin && !isModerator && (
-          <Card className="mb-6 border-blue-500/50 bg-blue-500/10">
-            <CardContent className="pt-6">
-              <p className="text-blue-600 dark:text-blue-400">
-                ℹ️ You are a Domain Admin. You can manage Events and Registrations for your domains, and assign roles to members.
               </p>
             </CardContent>
           </Card>

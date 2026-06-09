@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, LogOut, LayoutDashboard, Shield } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, Shield, Layers } from "lucide-react";
 import iicLogo from "@/assets/iic-logo.png";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,7 +25,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, isModerator, signOut } = useAuth();
+  const { user, isAdmin, isModerator, isDomainMember, signOut } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -102,6 +102,14 @@ export function Navbar() {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
+                  {isDomainMember && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/domain-panel" className="cursor-pointer">
+                        <Layers className="mr-2 h-4 w-4" />
+                        Domain Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   {(isAdmin || isModerator) && (
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="cursor-pointer">
@@ -181,6 +189,14 @@ export function Navbar() {
                       Dashboard
                     </Button>
                   </Link>
+                  {isDomainMember && (
+                    <Link to="/domain-panel" onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Layers className="mr-2 h-4 w-4" />
+                        Domain Panel
+                      </Button>
+                    </Link>
+                  )}
                   {(isAdmin || isModerator) && (
                     <Link to="/admin" onClick={() => setIsOpen(false)}>
                       <Button variant="outline" className="w-full justify-start">
