@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -54,6 +55,37 @@ export function EventForm({ event, onSuccess, onCancel }: EventFormProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(event?.image_url || null);
   const [isUploading, setIsUploading] = useState(false);
+  const [domains, setDomains] = useState<{ id: string; name: string }[]>([]);
+  const [selectedDomainIds, setSelectedDomainIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadDomains = async () => {
+      const { data } = await supabase
+        .from("domains")
+        .select("id, name")
+        .order("display_order", { ascending: true });
+      if (data) setDomains(data);
+    };
+    loadDomains();
+  }, []);
+
+  useEffect(() => {
+    if (!event?.id) return;
+    const loadEventDomains = async () => {
+      const { data } = await supabase
+        .from("event_domains")
+        .select("domain_id")
+        .eq("event_id", event.id);
+      if (data) setSelectedDomainIds(data.map((row) => row.domain_id));
+    };
+    loadEventDomains();
+  }, [event?.id]);
+
+  const toggleDomain = (id: string) => {
+    setSelectedDomainIds((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  };
 
   const form = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
@@ -144,6 +176,8 @@ export function EventForm({ event, onSuccess, onCancel }: EventFormProps) {
         display_order: data.display_order,
       };
 
+      let eventId = event?.id;
+
       if (event?.id) {
         const { error } = await supabase
           .from("events")
@@ -157,16 +191,37 @@ export function EventForm({ event, onSuccess, onCancel }: EventFormProps) {
           description: "The event has been successfully updated.",
         });
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("events")
-          .insert(eventData);
+          .insert(eventData)
+          .select("id")
+          .single();
 
         if (error) throw error;
+        eventId = inserted.id;
 
         toast({
           title: "Event created",
           description: "The event has been successfully created.",
         });
+      }
+
+      // Sync the event <-> domain links (organized-by)
+      if (eventId) {
+        const { error: deleteError } = await supabase
+          .from("event_domains")
+          .delete()
+          .eq("event_id", eventId);
+        if (deleteError) throw deleteError;
+
+        if (selectedDomainIds.length > 0) {
+          const { error: insertError } = await supabase
+            .from("event_domains")
+            .insert(
+              selectedDomainIds.map((domain_id) => ({ event_id: eventId, domain_id }))
+            );
+          if (insertError) throw insertError;
+        }
       }
 
       onSuccess();
@@ -278,6 +333,33 @@ export function EventForm({ event, onSuccess, onCancel }: EventFormProps) {
           {...form.register("venue")}
           placeholder="Event venue"
         />
+      </div>
+
+      {/* Organized by (Domains) */}
+      <div className="space-y-2">
+        <Label>Organized by (Domains)</Label>
+        <p className="text-xs text-muted-foreground">
+          Select one or more domains. The event appears on each selected domain's page.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          {domains.length === 0 ? (
+            <span className="text-sm text-muted-foreground">No domains available.</span>
+          ) : (
+            domains.map((domain) => {
+              const selected = selectedDomainIds.includes(domain.id);
+              return (
+                <Badge
+                  key={domain.id}
+                  variant={selected ? "default" : "outline"}
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleDomain(domain.id)}
+                >
+                  {domain.name}
+                </Badge>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Mode and Eligibility */}

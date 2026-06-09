@@ -45,10 +45,6 @@ const domainSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   icon: z.string().min(1, "Icon is required"),
   color: z.string().min(1, "Color is required"),
-  head_name: z.string().optional(),
-  head_role: z.string().optional(),
-  coordinator_name: z.string().optional(),
-  coordinator_role: z.string().optional(),
   display_order: z.coerce.number().int().min(0),
 });
 
@@ -97,10 +93,6 @@ export function DomainForm({ domain, onSuccess, onCancel }: DomainFormProps) {
       description: domain?.description || "",
       icon: domain?.icon || "Zap",
       color: domain?.color || "262 83% 58%",
-      head_name: domain?.head_name || "",
-      head_role: domain?.head_role || "Domain Head",
-      coordinator_name: domain?.coordinator_name || "",
-      coordinator_role: domain?.coordinator_role || "Domain Coordinator",
       display_order: domain?.display_order || 0,
     },
   });
@@ -128,10 +120,6 @@ export function DomainForm({ domain, onSuccess, onCancel }: DomainFormProps) {
       description: data.description,
       icon: data.icon,
       color: data.color,
-      head_name: data.head_name || null,
-      head_role: data.head_role || null,
-      coordinator_name: data.coordinator_name || null,
-      coordinator_role: data.coordinator_role || null,
       display_order: data.display_order,
       responsibilities,
     };
@@ -297,28 +285,14 @@ export function DomainForm({ domain, onSuccess, onCancel }: DomainFormProps) {
       </div>
 
       {/* Team Info */}
-      <div className="space-y-4">
+      <div className="space-y-2 rounded-lg border border-dashed p-4">
         <h4 className="font-medium text-sm text-muted-foreground">Team Information</h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="head_name">Domain Head Name</Label>
-            <Input id="head_name" {...register("head_name")} placeholder="John Doe" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="head_role">Domain Head Role</Label>
-            <Input id="head_role" {...register("head_role")} placeholder="Domain Head" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="coordinator_name">Coordinator Name</Label>
-            <Input id="coordinator_name" {...register("coordinator_name")} placeholder="Jane Doe" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="coordinator_role">Coordinator Role</Label>
-            <Input id="coordinator_role" {...register("coordinator_role")} placeholder="Domain Coordinator" />
-          </div>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          A domain's Head, Coordinator, and Members are now managed from the{" "}
+          <span className="font-medium text-foreground">Members</span> tab. Assign a student
+          member to this domain and set their designation there — it will appear automatically
+          on this domain and its page.
+        </p>
       </div>
 
       {/* Display Order */}

@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { 
-  Calendar, 
-  Palette, 
-  FileText, 
-  Shield, 
-  Briefcase, 
-  Building2, 
-  Rocket, 
+import {
+  Calendar,
+  Palette,
+  FileText,
+  Shield,
+  Briefcase,
+  Building2,
+  Rocket,
   Zap,
   User,
   Users,
+  ArrowRight,
   Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +30,12 @@ const iconMap: Record<string, React.ElementType> = {
   Zap,
 };
 
+// Domains that have a dedicated webpage. Add an entry here when a new
+// domain page is built (slug -> route).
+const domainRoutes: Record<string, string> = {
+  startups: "/startup",
+};
+
 interface Domain {
   id: string;
   slug: string;
@@ -36,37 +44,58 @@ interface Domain {
   icon: string;
   color: string;
   responsibilities: string[] | null;
-  head_name: string | null;
-  head_role: string | null;
-  coordinator_name: string | null;
-  coordinator_role: string | null;
   display_order: number;
+}
+
+interface DomainTeamMember {
+  id: string;
+  name: string;
+  role: string;
+  domain: string | null;
+  domain_role: string;
+  image_url: string | null;
 }
 
 export default function Domains() {
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [teamMembers, setTeamMembers] = useState<DomainTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDomains();
+    fetchData();
   }, []);
 
-  const fetchDomains = async () => {
-    const { data, error } = await supabase
-      .from("domains")
-      .select("*")
-      .order("display_order", { ascending: true });
+  const fetchData = async () => {
+    const [domainsRes, membersRes] = await Promise.all([
+      supabase.from("domains").select("*").order("display_order", { ascending: true }),
+      supabase
+        .from("student_members")
+        .select("id, name, role, domain, domain_role, image_url")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true }),
+    ]);
 
-    if (error) {
-      console.error("Error fetching domains:", error);
+    if (domainsRes.error) {
+      console.error("Error fetching domains:", domainsRes.error);
     } else {
-      setDomains(data || []);
+      setDomains(domainsRes.data || []);
+    }
+    if (!membersRes.error && membersRes.data) {
+      setTeamMembers(membersRes.data);
     }
     setLoading(false);
   };
 
   const getIcon = (iconName: string) => {
     return iconMap[iconName] || Zap;
+  };
+
+  const getDomainLeads = (domainName: string) => {
+    const inDomain = teamMembers.filter((m) => m.domain === domainName);
+    return {
+      head: inDomain.find((m) => m.domain_role === "head") || null,
+      coordinator: inDomain.find((m) => m.domain_role === "coordinator") || null,
+    };
   };
 
   if (loading) {
@@ -110,6 +139,8 @@ export default function Domains() {
             <div className="space-y-12">
               {domains.map((domain, index) => {
                 const IconComponent = getIcon(domain.icon);
+                const { head, coordinator } = getDomainLeads(domain.name);
+                const domainPage = domainRoutes[domain.slug];
                 return (
                   <div 
                     key={domain.id} 
@@ -158,37 +189,57 @@ export default function Domains() {
                           </div>
                         )}
 
-                        {/* Team */}
+                        {/* Team — derived from the student_members list */}
                         <div className="flex flex-wrap gap-6">
-                          {domain.head_name && (
+                          {head && (
                             <div className="flex items-center gap-3 bg-secondary/50 rounded-xl px-4 py-3">
-                              <div 
-                                className="w-10 h-10 rounded-full flex items-center justify-center"
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden"
                                 style={{ backgroundColor: `hsl(${domain.color})` }}
                               >
-                                <User className="w-5 h-5 text-primary-foreground" />
+                                {head.image_url ? (
+                                  <img src={head.image_url} alt={head.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <User className="w-5 h-5 text-primary-foreground" />
+                                )}
                               </div>
                               <div>
-                                <p className="font-medium text-foreground text-sm">{domain.head_name}</p>
-                                <p className="text-xs text-muted-foreground">{domain.head_role || "Domain Head"}</p>
+                                <p className="font-medium text-foreground text-sm">{head.name}</p>
+                                <p className="text-xs text-muted-foreground">{head.role || "Domain Head"}</p>
                               </div>
                             </div>
                           )}
-                          {domain.coordinator_name && (
+                          {coordinator && (
                             <div className="flex items-center gap-3 bg-secondary/50 rounded-xl px-4 py-3">
-                              <div 
-                                className="w-10 h-10 rounded-full flex items-center justify-center opacity-70"
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden opacity-90"
                                 style={{ backgroundColor: `hsl(${domain.color})` }}
                               >
-                                <Users className="w-5 h-5 text-primary-foreground" />
+                                {coordinator.image_url ? (
+                                  <img src={coordinator.image_url} alt={coordinator.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Users className="w-5 h-5 text-primary-foreground" />
+                                )}
                               </div>
                               <div>
-                                <p className="font-medium text-foreground text-sm">{domain.coordinator_name}</p>
-                                <p className="text-xs text-muted-foreground">{domain.coordinator_role || "Domain Coordinator"}</p>
+                                <p className="font-medium text-foreground text-sm">{coordinator.name}</p>
+                                <p className="text-xs text-muted-foreground">{coordinator.role || "Domain Coordinator"}</p>
                               </div>
                             </div>
                           )}
                         </div>
+
+                        {/* Link to the dedicated domain page when one exists */}
+                        {domainPage && (
+                          <Link
+                            to={domainPage}
+                            className="inline-flex items-center gap-2 mt-6 text-sm font-medium hover:gap-3 transition-all"
+                            style={{ color: `hsl(${domain.color})` }}
+                          >
+                            Explore the {domain.name} domain
+                            <ArrowRight className="w-4 h-4" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -446,6 +446,25 @@
   font-weight: 800;
 }
 
+/* Avatar photos (when a member has an image) */
+.sd-avatar {
+  overflow: hidden;
+}
+
+.sd-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* Empty-state message for dynamic sections */
+.sd-empty {
+  margin: 8px 0 0;
+  color: var(--sd-muted);
+  font-size: 1.05rem;
+}
+
 /* Portfolio / Startups */
 .sd-portfolio-section {
   background: white;

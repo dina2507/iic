@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +20,7 @@ interface StudentMember {
   name: string;
   role: string;
   domain: string | null;
+  domain_role: string | null;
   image_url: string | null;
   linkedin_url: string | null;
   whatsapp_url: string | null;
@@ -20,6 +28,12 @@ interface StudentMember {
   is_active: boolean | null;
   is_core_member: boolean | null;
 }
+
+const designationOptions = [
+  { value: "head", label: "Domain Head" },
+  { value: "coordinator", label: "Domain Coordinator" },
+  { value: "member", label: "Member" },
+];
 
 interface StudentMemberFormProps {
   member?: StudentMember;
@@ -32,10 +46,12 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [domainOptions, setDomainOptions] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: member?.name || "",
     role: member?.role || "",
     domain: member?.domain || "",
+    domain_role: member?.domain_role || "member",
     image_url: member?.image_url || "",
     linkedin_url: member?.linkedin_url || "",
     whatsapp_url: member?.whatsapp_url || "",
@@ -43,6 +59,17 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
     is_active: member?.is_active ?? true,
     is_core_member: member?.is_core_member ?? false,
   });
+
+  useEffect(() => {
+    const fetchDomains = async () => {
+      const { data } = await supabase
+        .from("domains")
+        .select("name")
+        .order("display_order", { ascending: true });
+      if (data) setDomainOptions(data.map((d) => d.name));
+    };
+    fetchDomains();
+  }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,6 +102,7 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
       name: formData.name,
       role: formData.role,
       domain: formData.domain || null,
+      domain_role: formData.domain_role || "member",
       image_url: formData.image_url || null,
       linkedin_url: formData.linkedin_url || null,
       whatsapp_url: formData.whatsapp_url || null,
@@ -131,14 +159,46 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="domain">Domain</Label>
-        <Input
-          id="domain"
-          value={formData.domain}
-          onChange={(e) => setFormData((prev) => ({ ...prev, domain: e.target.value }))}
-          placeholder="e.g., Events, Design, Editorial"
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="domain">Domain</Label>
+          <Select
+            value={formData.domain || "none"}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, domain: value === "none" ? "" : value }))
+            }
+          >
+            <SelectTrigger id="domain">
+              <SelectValue placeholder="Select domain" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No domain</SelectItem>
+              {domainOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="domain_role">Designation</Label>
+          <Select
+            value={formData.domain_role}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, domain_role: value }))}
+          >
+            <SelectTrigger id="domain_role">
+              <SelectValue placeholder="Select designation" />
+            </SelectTrigger>
+            <SelectContent>
+              {designationOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-2">

@@ -46,3 +46,6 @@ id_ed25519
 
 # Local tool cache/artifacts
 vite.config.ts.timestamp-*.mjs
+
+# custom files
+plan.md

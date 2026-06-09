@@ -65,6 +65,42 @@ export type Database = {
         }
         Relationships: []
       }
+      event_domains: {
+        Row: {
+          created_at: string
+          domain_id: string
+          event_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          domain_id: string
+          event_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          domain_id?: string
+          event_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_domains_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_domains_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_registrations: {
         Row: {
           event_id: string
@@ -267,6 +303,7 @@ export type Database = {
           created_at: string
           display_order: number
           domain: string | null
+          domain_role: string
           id: string
           image_url: string | null
           is_active: boolean | null
@@ -281,6 +318,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           domain?: string | null
+          domain_role?: string
           id?: string
           image_url?: string | null
           is_active?: boolean | null
@@ -295,6 +333,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           domain?: string | null
+          domain_role?: string
           id?: string
           image_url?: string | null
           is_active?: boolean | null

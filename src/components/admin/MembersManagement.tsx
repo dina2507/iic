@@ -39,6 +39,7 @@ interface StudentMember {
   name: string;
   role: string;
   domain: string | null;
+  domain_role: string | null;
   image_url: string | null;
   linkedin_url: string | null;
   whatsapp_url: string | null;
@@ -263,9 +264,14 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
                           {member.is_core_member && <Star className="w-4 h-4 text-amber-500 fill-amber-500" />}
                         </div>
                         <p className="text-sm text-accent">{member.role}</p>
-                        {member.domain && (
-                          <Badge variant="secondary" className="text-xs mt-1">{member.domain}</Badge>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                          {member.domain && (
+                            <Badge variant="secondary" className="text-xs">{member.domain}</Badge>
+                          )}
+                          {member.domain_role && member.domain_role !== "member" && (
+                            <Badge className="text-xs capitalize">{member.domain_role}</Badge>
+                          )}
+                        </div>
                       </div>
                       {canManageContent && (
                         <div className="flex flex-col gap-1">

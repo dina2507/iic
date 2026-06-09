@@ -7,7 +7,7 @@ export default function Startup() {
     <div className="min-h-screen">
       <Navbar />
       <main className="pt-16">
-        <StartupContent />
+        <StartupContent domainName="Startups" slug="startups" />
       </main>
       <Footer />
     </div>
