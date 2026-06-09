@@ -11,6 +11,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** True while role/membership lookups are still in flight after login. */
+  rolesLoading: boolean;
   isAdmin: boolean;
   isModerator: boolean;
   isDomainAdmin: boolean;
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const [isDomainAdmin, setIsDomainAdmin] = useState(false);
@@ -64,6 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkUserRoles(session.user.id);
+      } else {
+        setRolesLoading(false);
       }
       setLoading(false);
     });
@@ -80,59 +85,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsDomainMember(false);
     setIsStudentMember(false);
     setUserDomainRoles([]);
+    setRolesLoading(false);
   };
 
   const checkUserRoles = async (userId: string) => {
-    // 1. Check global roles (admin / moderator)
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
+    setRolesLoading(true);
+    try {
+      // Run the three independent lookups concurrently instead of in a
+      // sequential waterfall — cuts protected-route load time by ~2/3.
+      const [rolesRes, domainRolesRes, studentRes] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("user_domain_roles").select("domain_id, role").eq("user_id", userId),
+        supabase.from("student_members").select("id").eq("user_id", userId).maybeSingle(),
+      ]);
 
-    if (!error && data) {
-      const roles = data.map(r => r.role);
-      setIsAdmin(roles.includes("admin"));
-      setIsModerator(roles.includes("moderator"));
-    } else {
-      setIsAdmin(false);
-      setIsModerator(false);
-    }
+      // 1. Global roles (admin / moderator)
+      if (!rolesRes.error && rolesRes.data) {
+        const roles = rolesRes.data.map((r) => r.role);
+        setIsAdmin(roles.includes("admin"));
+        setIsModerator(roles.includes("moderator"));
+      } else {
+        setIsAdmin(false);
+        setIsModerator(false);
+      }
 
-    // 2. Check domain roles — fetch ALL roles (head, coordinator, member)
-    const { data: domainRoles, error: domainError } = await supabase
-      .from("user_domain_roles")
-      .select("domain_id, role")
-      .eq("user_id", userId);
-    
-    if (!domainError && domainRoles && domainRoles.length > 0) {
-      const roles = domainRoles as UserDomainRole[];
-      setUserDomainRoles(roles);
+      // 2. Domain roles — head / coordinator / member
+      if (!domainRolesRes.error && domainRolesRes.data && domainRolesRes.data.length > 0) {
+        const roles = domainRolesRes.data as UserDomainRole[];
+        setUserDomainRoles(roles);
+        const roleValues = roles.map((r) => r.role);
+        setIsDomainHead(roleValues.includes("head"));
+        setIsDomainCoordinator(roleValues.includes("coordinator"));
+        setIsDomainMember(true); // any domain role means they are a domain member
+        setIsDomainAdmin(roleValues.includes("head") || roleValues.includes("coordinator"));
+      } else {
+        setUserDomainRoles([]);
+        setIsDomainHead(false);
+        setIsDomainCoordinator(false);
+        setIsDomainMember(false);
+        setIsDomainAdmin(false);
+      }
 
-      const roleValues = roles.map(r => r.role);
-      setIsDomainHead(roleValues.includes("head"));
-      setIsDomainCoordinator(roleValues.includes("coordinator"));
-      setIsDomainMember(true); // any domain role means they are a domain member
-      // backward compat: isDomainAdmin = head or coordinator
-      setIsDomainAdmin(roleValues.includes("head") || roleValues.includes("coordinator"));
-    } else {
-      setUserDomainRoles([]);
-      setIsDomainHead(false);
-      setIsDomainCoordinator(false);
-      setIsDomainMember(false);
-      setIsDomainAdmin(false);
-    }
-
-    // 3. Check student member status
-    const { data: studentMember, error: studentError } = await supabase
-      .from("student_members")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (!studentError && studentMember) {
-      setIsStudentMember(true);
-    } else {
-      setIsStudentMember(false);
+      // 3. Student-member status
+      setIsStudentMember(!studentRes.error && !!studentRes.data);
+    } finally {
+      setRolesLoading(false);
     }
   };
 
@@ -180,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, loading,
+      user, session, loading, rolesLoading,
       isAdmin, isModerator,
       isDomainAdmin, isDomainHead, isDomainCoordinator, isDomainMember,
       isStudentMember, userDomainRoles,

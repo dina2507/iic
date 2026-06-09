@@ -30,7 +30,22 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Contact = lazy(() => import("./pages/Contact"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Treat data as fresh for 5 min so switching admin tabs / navigating
+      // back to a page serves cached data instantly instead of re-fetching
+      // (and showing a spinner) every single time.
+      staleTime: 1000 * 60 * 5,
+      // Keep unused query data around for 30 min before garbage collection.
+      gcTime: 1000 * 60 * 30,
+      // Don't refetch just because the window regained focus.
+      refetchOnWindowFocus: false,
+      // One quick retry instead of the default three (faster failure surface).
+      retry: 1,
+    },
+  },
+});
 
 function RouteLoadingFallback() {
   return (

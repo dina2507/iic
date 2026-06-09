@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { downloadCsv } from "@/lib/export";
 
 interface Registration {
   id: string;
@@ -175,23 +176,11 @@ export default function EventRegistrations({ eventId }: EventRegistrationsProps 
       formatDateTime(reg.registered_at),
     ]);
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `registrations_${selectedEvent === "all" ? "all" : "event"}_${new Date().toISOString().split("T")[0]}.csv`
+    downloadCsv(
+      `registrations_${selectedEvent === "all" ? "all" : "event"}_${new Date().toISOString().split("T")[0]}.csv`,
+      headers,
+      rows
     );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 
     toast({
       title: "Export successful",

@@ -18,10 +18,16 @@ export default function ProtectedRoute({
   requireDomainAdmin = false,
   requireDomainMember = false
 }: ProtectedRouteProps) {
-  const { user, loading, isAdmin, isModerator, isDomainAdmin, isDomainMember } = useAuth();
+  const { user, loading, rolesLoading, isAdmin, isModerator, isDomainAdmin, isDomainMember } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  const needsRoles =
+    requireAdmin || requireModerator || requireDomainAdmin || requireDomainMember;
+
+  // Wait for the session AND (for role-gated routes) the role lookup to
+  // resolve. Otherwise a legitimate admin refreshing /admin gets bounced to
+  // "/" during the brief window where roles haven't loaded yet.
+  if (loading || (!!user && needsRoles && rolesLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-accent" />
