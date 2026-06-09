@@ -17,14 +17,8 @@ import {
   Clock,
   ExternalLink,
   Phone,
-  Github,
-  Linkedin,
-  Twitter,
-  Instagram,
-  FileText,
   Upload
 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +30,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -49,26 +42,9 @@ const profileSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
   avatar_url: z.string().url("Invalid URL").optional().or(z.literal("")),
   phone_number: z.string().max(20, "Phone number is too long").optional(),
-  about: z.string().max(500, "About section must be 500 characters or less").optional(),
-  social_links: z.object({
-    linkedin: z.string().url("Invalid URL").optional().or(z.literal("")),
-    github: z.string().url("Invalid URL").optional().or(z.literal("")),
-    twitter: z.string().url("Invalid URL").optional().or(z.literal("")),
-    instagram: z.string().url("Invalid URL").optional().or(z.literal("")),
-  }).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
-
-interface SocialLinks {
-  linkedin?: string;
-  github?: string;
-  twitter?: string;
-  instagram?: string;
-}
-
-const getSocialLinks = (value: unknown): SocialLinks =>
-  value && typeof value === "object" ? (value as SocialLinks) : {};
 
 interface EventRegistration {
   id: string;
@@ -221,13 +197,6 @@ export default function Dashboard() {
       full_name: profile?.full_name || "",
       avatar_url: profile?.avatar_url || "",
       phone_number: profile?.phone_number || "",
-      about: profile?.about || "",
-      social_links: {
-        linkedin: getSocialLinks(profile?.social_links).linkedin || "",
-        github: getSocialLinks(profile?.social_links).github || "",
-        twitter: getSocialLinks(profile?.social_links).twitter || "",
-        instagram: getSocialLinks(profile?.social_links).instagram || "",
-      }
     },
   });
 
@@ -237,13 +206,6 @@ export default function Dashboard() {
         full_name: profile.full_name || "",
         avatar_url: profile.avatar_url || "",
         phone_number: profile.phone_number || "",
-        about: profile.about || "",
-        social_links: {
-          linkedin: getSocialLinks(profile.social_links).linkedin || "",
-          github: getSocialLinks(profile.social_links).github || "",
-          twitter: getSocialLinks(profile.social_links).twitter || "",
-          instagram: getSocialLinks(profile.social_links).instagram || "",
-        }
       });
     }
   }, [profile, form]);
@@ -257,8 +219,6 @@ export default function Dashboard() {
           full_name: data.full_name,
           avatar_url: data.avatar_url || null,
           phone_number: data.phone_number || null,
-          about: data.about || null,
-          social_links: data.social_links as Json,
         })
         .eq("id", user.id);
       if (error) throw error;
@@ -587,7 +547,8 @@ export default function Dashboard() {
                         Profile Settings
                       </CardTitle>
                       <CardDescription>
-                        Manage your profile information
+                        Your private login &amp; contact details. This is separate from your
+                        public Member Profile.
                       </CardDescription>
                     </div>
                     {!isEditing && (
@@ -626,70 +587,10 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="about">About You</Label>
-                          <span className="text-xs text-muted-foreground">
-                            {form.watch("about")?.length || 0}/500
-                          </span>
-                        </div>
-                        <Textarea
-                          id="about"
-                          {...form.register("about")}
-                          placeholder="Tell us a bit about yourself..."
-                          className="resize-none h-24"
-                        />
-                        {form.formState.errors.about && (
-                          <p className="text-sm text-destructive">{form.formState.errors.about.message}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-4 border rounded-md p-4 bg-muted/20">
-                        <h4 className="font-medium text-sm flex items-center gap-2">
-                          <FileText className="w-4 h-4" /> Social Profiles
-                        </h4>
-                        
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="linkedin" className="flex items-center gap-2">
-                              <Linkedin className="w-3 h-3" /> LinkedIn
-                            </Label>
-                            <Input id="linkedin" {...form.register("social_links.linkedin")} placeholder="https://linkedin.com/in/..." />
-                            {form.formState.errors.social_links?.linkedin && (
-                              <p className="text-xs text-destructive">{form.formState.errors.social_links.linkedin.message}</p>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="github" className="flex items-center gap-2">
-                              <Github className="w-3 h-3" /> GitHub
-                            </Label>
-                            <Input id="github" {...form.register("social_links.github")} placeholder="https://github.com/..." />
-                            {form.formState.errors.social_links?.github && (
-                              <p className="text-xs text-destructive">{form.formState.errors.social_links.github.message}</p>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="twitter" className="flex items-center gap-2">
-                              <Twitter className="w-3 h-3" /> Twitter
-                            </Label>
-                            <Input id="twitter" {...form.register("social_links.twitter")} placeholder="https://twitter.com/..." />
-                            {form.formState.errors.social_links?.twitter && (
-                              <p className="text-xs text-destructive">{form.formState.errors.social_links.twitter.message}</p>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="instagram" className="flex items-center gap-2">
-                              <Instagram className="w-3 h-3" /> Instagram
-                            </Label>
-                            <Input id="instagram" {...form.register("social_links.instagram")} placeholder="https://instagram.com/..." />
-                            {form.formState.errors.social_links?.instagram && (
-                              <p className="text-xs text-destructive">{form.formState.errors.social_links.instagram.message}</p>
-                            )}
-                          </div>
-                        </div>
+                      <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                        Your public bio, photo, and social links are managed in the{" "}
+                        <span className="font-medium text-foreground">Member Profile</span> tab
+                        and shown on the public Members page.
                       </div>
 
                       <div className="space-y-2">
@@ -721,82 +622,28 @@ export default function Dashboard() {
                     </form>
                   ) : (
                     <div className="space-y-4">
-                      <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="space-y-4">
-                          <div>
-                            <Label className="text-muted-foreground">Full Name</Label>
-                            <p className="text-lg">{profile?.full_name || "Not set"}</p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">Email</Label>
-                            <p className="text-lg">{user.email}</p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">Phone Number</Label>
-                            <p className="text-lg flex items-center gap-2">
-                              <Phone className="w-4 h-4 text-muted-foreground" />
-                              {profile?.phone_number || "Not set"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground">Member Since</Label>
-                            <p className="text-lg flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              {profile?.created_at ? formatDate(profile.created_at) : "Unknown"}
-                            </p>
-                          </div>
+                      <div className="space-y-4 max-w-md">
+                        <div>
+                          <Label className="text-muted-foreground">Full Name</Label>
+                          <p className="text-lg">{profile?.full_name || "Not set"}</p>
                         </div>
-                        
-                        <div className="space-y-4 border-l pl-6">
-                          <div>
-                            <Label className="text-muted-foreground">About</Label>
-                            <p className="text-base whitespace-pre-wrap mt-1">
-                              {profile?.about || "No description provided."}
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <Label className="text-muted-foreground mb-2 block">Social Profiles</Label>
-                            {(() => {
-                              const social = getSocialLinks(profile?.social_links);
-                              const hasAny = social.linkedin || social.github || social.twitter || social.instagram;
-                              return (
-                                <div className="flex flex-wrap gap-2">
-                                  {social.linkedin && (
-                                    <Button size="sm" variant="outline" asChild className="gap-2">
-                                      <a href={social.linkedin} target="_blank" rel="noreferrer">
-                                        <Linkedin className="w-3 h-3" /> LinkedIn
-                                      </a>
-                                    </Button>
-                                  )}
-                                  {social.github && (
-                                    <Button size="sm" variant="outline" asChild className="gap-2">
-                                      <a href={social.github} target="_blank" rel="noreferrer">
-                                        <Github className="w-3 h-3" /> GitHub
-                                      </a>
-                                    </Button>
-                                  )}
-                                  {social.twitter && (
-                                    <Button size="sm" variant="outline" asChild className="gap-2">
-                                      <a href={social.twitter} target="_blank" rel="noreferrer">
-                                        <Twitter className="w-3 h-3" /> Twitter
-                                      </a>
-                                    </Button>
-                                  )}
-                                  {social.instagram && (
-                                    <Button size="sm" variant="outline" asChild className="gap-2">
-                                      <a href={social.instagram} target="_blank" rel="noreferrer">
-                                        <Instagram className="w-3 h-3" /> Instagram
-                                      </a>
-                                    </Button>
-                                  )}
-                                  {!hasAny && (
-                                    <p className="text-sm text-muted-foreground italic">No social links added.</p>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </div>
+                        <div>
+                          <Label className="text-muted-foreground">Email</Label>
+                          <p className="text-lg">{user.email}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Phone Number</Label>
+                          <p className="text-lg flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-muted-foreground" />
+                            {profile?.phone_number || "Not set"}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Member Since</Label>
+                          <p className="text-lg flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            {profile?.created_at ? formatDate(profile.created_at) : "Unknown"}
+                          </p>
                         </div>
                       </div>
                     </div>

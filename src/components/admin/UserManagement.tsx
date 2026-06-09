@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, Search, Shield, ShieldOff, UserCog, UserPlus, Layers } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
+import { getExistingDomainHead } from "@/lib/domainRoles";
 import { useQuery } from "@tanstack/react-query";
 import {
   Select,
@@ -329,6 +330,20 @@ export default function UserManagement() {
 
   const assignDomainRole = async () => {
     if (!domainSearchedUser || !selectedDomainId) return;
+
+    // Enforce one Head per domain.
+    if (selectedDomainRole === "head") {
+      const currentHead = await getExistingDomainHead(selectedDomainId, domainSearchedUser.id);
+      if (currentHead) {
+        toast({
+          title: "Domain already has a Head",
+          description: `${currentHead.name} is the current Head. Demote them first, then assign a new Head.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Check if already assigned
     const { data: existing } = await supabase
       .from("user_domain_roles")
@@ -362,6 +377,19 @@ export default function UserManagement() {
     setDomainSearchedUser(null);
     setDomainSearchEmail("");
     refetchDomainRoles();
+  };
+
+  const makeHead = async (assignment: { id: string; domain_id: string; user_id: string }) => {
+    const currentHead = await getExistingDomainHead(assignment.domain_id, assignment.user_id);
+    if (currentHead) {
+      toast({
+        title: "Domain already has a Head",
+        description: `${currentHead.name} is the current Head. Demote them first, then promote a new Head.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    updateDomainRole(assignment.id, "head");
   };
 
   const updateDomainRole = async (id: string, newRole: DomainRole) => {
@@ -691,7 +719,7 @@ export default function UserManagement() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updateDomainRole(assignment.id, "head")}
+                              onClick={() => makeHead(assignment)}
                               className="gap-1"
                             >
                               <UserCog className="w-3 h-3" />

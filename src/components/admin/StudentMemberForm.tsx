@@ -146,6 +146,26 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
   const onSubmit = async (data: StudentMemberFormData) => {
     setIsLoading(true);
 
+    // Enforce one Head per domain (display roster).
+    if (data.domain_role === "head" && data.domain) {
+      const { data: existingHeads } = await supabase
+        .from("student_members")
+        .select("id, name")
+        .eq("domain", data.domain)
+        .eq("domain_role", "head")
+        .eq("is_active", true);
+      const otherHead = (existingHeads || []).find((h) => h.id !== member?.id);
+      if (otherHead) {
+        toast({
+          title: "Domain already has a Head",
+          description: `${otherHead.name} is already Head of ${data.domain}. Change their role first, then assign a new Head.`,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+
     const payload = {
       name: data.name,
       role: data.domain_role === "head" ? "Domain Head" : data.domain_role === "coordinator" ? "Domain Coordinator" : "Member",
