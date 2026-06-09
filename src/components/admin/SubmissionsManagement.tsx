@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Mail, MessageSquare, Check, X, Clock } from "lucide-react";
+import { Loader2, Mail, MessageSquare, Check, X, Clock, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { downloadCsv } from "@/lib/export";
 
 interface JoinRequest {
   id: string;
@@ -116,6 +117,44 @@ export default function SubmissionsManagement() {
     });
   };
 
+  const today = () => new Date().toISOString().split("T")[0];
+
+  const exportJoins = () => {
+    if (!joinRequests?.length) {
+      toast({ title: "Nothing to export", description: "No join requests yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `join_requests_${today()}.csv`,
+      ["Name", "Email", "Reason", "Status", "Submitted"],
+      joinRequests.map((r) => [r.name, r.email, r.reason, r.status, formatDate(r.created_at)])
+    );
+  };
+
+  const exportIdeas = () => {
+    if (!ideaSubmissions?.length) {
+      toast({ title: "Nothing to export", description: "No idea submissions yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `idea_submissions_${today()}.csv`,
+      ["Name", "Email", "Idea", "Status", "Submitted"],
+      ideaSubmissions.map((r) => [r.name, r.email, r.idea, r.status, formatDate(r.created_at)])
+    );
+  };
+
+  const exportContacts = () => {
+    if (!contactSubmissions?.length) {
+      toast({ title: "Nothing to export", description: "No contact messages yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `contact_submissions_${today()}.csv`,
+      ["Name", "Email", "Subject", "Message", "Status", "Submitted"],
+      contactSubmissions.map((r) => [r.name, r.email, r.subject, r.message, r.status, formatDate(r.created_at)])
+    );
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="joins">
@@ -126,6 +165,11 @@ export default function SubmissionsManagement() {
         </TabsList>
 
         <TabsContent value="joins" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button variant="outline" size="sm" onClick={exportJoins} disabled={!joinRequests?.length}>
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+          </div>
           {loadingJoins ? (
             <div className="flex justify-center p-8"><Loader2 className="animate-spin text-accent" /></div>
           ) : joinRequests?.length === 0 ? (
@@ -177,6 +221,11 @@ export default function SubmissionsManagement() {
         </TabsContent>
 
         <TabsContent value="ideas" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button variant="outline" size="sm" onClick={exportIdeas} disabled={!ideaSubmissions?.length}>
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+          </div>
           {loadingIdeas ? (
             <div className="flex justify-center p-8"><Loader2 className="animate-spin text-accent" /></div>
           ) : ideaSubmissions?.length === 0 ? (
@@ -228,6 +277,11 @@ export default function SubmissionsManagement() {
         </TabsContent>
 
         <TabsContent value="contacts" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button variant="outline" size="sm" onClick={exportContacts} disabled={!contactSubmissions?.length}>
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+          </div>
           {loadingContacts ? (
             <div className="flex justify-center p-8"><Loader2 className="animate-spin text-accent" /></div>
           ) : contactSubmissions?.length === 0 ? (

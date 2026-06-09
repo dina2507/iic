@@ -22,9 +22,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Search, Shield, ShieldOff, UserCog, UserPlus, Layers } from "lucide-react";
+import { Loader2, Search, Shield, ShieldOff, UserCog, UserPlus, Layers, Download } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { getExistingDomainHead } from "@/lib/domainRoles";
+import { downloadCsv } from "@/lib/export";
 import { useQuery } from "@tanstack/react-query";
 import {
   Select,
@@ -302,6 +303,32 @@ export default function UserManagement() {
     });
   };
 
+  const today = () => new Date().toISOString().split("T")[0];
+
+  const exportRoles = () => {
+    if (!usersWithRoles?.length) {
+      toast({ title: "Nothing to export", description: "No admins or moderators yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `admins_moderators_${today()}.csv`,
+      ["Name", "Email", "Role", "Joined"],
+      usersWithRoles.map((u) => [u.full_name ?? "", u.email ?? "", u.role ?? "", formatDate(u.created_at)])
+    );
+  };
+
+  const exportDomainRoles = () => {
+    if (!domainRoleAssignments?.length) {
+      toast({ title: "Nothing to export", description: "No domain roles assigned yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `domain_roles_${today()}.csv`,
+      ["User", "Email", "Domain", "Role", "Assigned"],
+      domainRoleAssignments.map((a) => [a.userName, a.userEmail, a.domainName, a.role, formatDate(a.created_at)])
+    );
+  };
+
   // --- Domain Role Handlers ---
   const searchDomainUser = async () => {
     if (!domainSearchEmail.trim()) {
@@ -539,10 +566,16 @@ export default function UserManagement() {
 
       {/* Current Admins & Moderators */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Shield className="w-5 h-5" />
-          Current Admins & Moderators
-        </h3>
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Current Admins & Moderators
+          </h3>
+          <Button variant="outline" size="sm" onClick={exportRoles} disabled={!usersWithRoles?.length}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </div>
 
         {isLoading ? (
           <div className="flex justify-center py-12">
@@ -664,10 +697,16 @@ export default function UserManagement() {
         </div>
 
         {/* Current Domain Role Assignments */}
-        <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
-          <Shield className="w-4 h-4" />
-          Current Domain Roles
-        </h4>
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <h4 className="text-md font-semibold flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            Current Domain Roles
+          </h4>
+          <Button variant="outline" size="sm" onClick={exportDomainRoles} disabled={!domainRoleAssignments?.length}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </div>
         {domainRolesLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-accent" />

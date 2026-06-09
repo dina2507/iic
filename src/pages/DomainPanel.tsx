@@ -24,6 +24,7 @@ import {
   Check,
   X,
   User,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,6 +75,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { EventForm } from "@/components/admin/EventForm";
 import EventRegistrations from "@/components/admin/EventRegistrations";
+import { downloadCsv } from "@/lib/export";
 
 interface Event {
   id: string;
@@ -482,6 +484,24 @@ export default function DomainPanel() {
     }
   };
 
+  const exportTeam = () => {
+    if (!teamMembers?.length) {
+      toast({ title: "Nothing to export", description: "No team members yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `domain_team_${new Date().toISOString().split("T")[0]}.csv`,
+      ["Name", "Email", "Domain", "Role", "Joined"],
+      teamMembers.map((m) => [
+        m.profile?.full_name ?? "",
+        m.profile?.email ?? "",
+        getDomainName(m.domain_id),
+        m.role,
+        formatDate(m.created_at),
+      ])
+    );
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -838,16 +858,22 @@ export default function DomainPanel() {
           {/* Team Tab */}
           <TabsContent value="team">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Team Management
-                </CardTitle>
-                <CardDescription>
-                  {canManageTeam
-                    ? "View and manage your domain team. Add members, assign roles."
-                    : "View your domain team roster."}
-                </CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Team Management
+                  </CardTitle>
+                  <CardDescription>
+                    {canManageTeam
+                      ? "View and manage your domain team. Add members, assign roles."
+                      : "View your domain team roster."}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={exportTeam} disabled={!teamMembers?.length}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
               </CardHeader>
               <CardContent className="space-y-8">
                 {/* Add Team Member — Heads only */}

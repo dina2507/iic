@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Edit,
+  Trash2,
   Loader2,
   GraduationCap,
   Users,
   Mail,
   Linkedin,
   Star,
-  Check
+  Check,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { downloadCsv } from "@/lib/export";
 import { FacultyMemberForm } from "./FacultyMemberForm";
 import { StudentMemberForm } from "./StudentMemberForm";
 
@@ -134,6 +136,39 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
     }
   };
 
+  const today = () => new Date().toISOString().split("T")[0];
+
+  const exportFaculty = () => {
+    if (!facultyMembers?.length) {
+      toast({ title: "Nothing to export", description: "No faculty members yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `faculty_members_${today()}.csv`,
+      ["Name", "Designation", "Department", "Email", "Active"],
+      facultyMembers.map((m) => [m.name, m.designation, m.department, m.email ?? "", m.is_active ? "Yes" : "No"])
+    );
+  };
+
+  const exportStudents = () => {
+    if (!studentMembers?.length) {
+      toast({ title: "Nothing to export", description: "No student members yet.", variant: "destructive" });
+      return;
+    }
+    downloadCsv(
+      `student_members_${today()}.csv`,
+      ["Name", "Role", "Domain", "Domain Role", "Core Member", "Active"],
+      studentMembers.map((m) => [
+        m.name,
+        m.role,
+        m.domain ?? "",
+        m.domain_role ?? "",
+        m.is_core_member ? "Yes" : "No",
+        m.is_active ? "Yes" : "No",
+      ])
+    );
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="faculty" className="w-full">
@@ -150,14 +185,20 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
 
         {/* Faculty Tab */}
         <TabsContent value="faculty" className="mt-6">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-4 gap-2">
             <p className="text-muted-foreground">Manage faculty mentors and coordinators</p>
-            {canManageContent && (
-              <Button onClick={() => setIsFacultyFormOpen(true)} className="gradient-innovation">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Faculty
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={exportFaculty} disabled={!facultyMembers?.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export
               </Button>
-            )}
+              {canManageContent && (
+                <Button onClick={() => setIsFacultyFormOpen(true)} className="gradient-innovation">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Faculty
+                </Button>
+              )}
+            </div>
           </div>
 
           {facultyLoading ? (
@@ -263,14 +304,20 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
 
         {/* Students Tab */}
         <TabsContent value="students" className="mt-6">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-4 gap-2">
             <p className="text-muted-foreground">Manage student leaders and team members</p>
-            {canManageContent && (
-              <Button onClick={() => setIsStudentFormOpen(true)} className="gradient-innovation">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Student
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={exportStudents} disabled={!studentMembers?.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export
               </Button>
-            )}
+              {canManageContent && (
+                <Button onClick={() => setIsStudentFormOpen(true)} className="gradient-innovation">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Student
+                </Button>
+              )}
+            </div>
           </div>
 
           {studentsLoading ? (
