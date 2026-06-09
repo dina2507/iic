@@ -144,6 +144,7 @@ export default function DomainPanel() {
     "coordinator" | "member"
   >("member");
   const [addMemberDomainId, setAddMemberDomainId] = useState<string>("");
+  const [managingRegistrationsId, setManagingRegistrationsId] = useState<string | null>(null);
 
   // Get the user's domain IDs
   const myDomainIds = useMemo(
@@ -207,6 +208,22 @@ export default function DomainPanel() {
       return data as Event[];
     },
     enabled: myDomainIds.length > 0,
+  });
+
+  // Fetch assigned events for coordinators (personal assignment)
+  const { data: assignedEvents, isLoading: assignedEventsLoading } = useQuery({
+    queryKey: ["assigned-events", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("events")
+        .select('*')
+        .or(`faculty_coordinator_ids.cs.{${user.id}},student_coordinator_ids.cs.{${user.id}}`)
+        .order("date", { ascending: false });
+      if (error) throw error;
+      return data as Event[];
+    },
+    enabled: !!user?.id,
   });
 
   // Fetch team members for the user's domains
@@ -579,12 +596,18 @@ export default function DomainPanel() {
           <TabsList className="flex flex-wrap w-full max-w-3xl gap-1">
             <TabsTrigger value="events" className="gap-2">
               <Calendar className="w-4 h-4" />
-              Events
+              Domain Events
             </TabsTrigger>
+            {assignedEvents && assignedEvents.length > 0 && (
+              <TabsTrigger value="assigned-events" className="gap-2 bg-accent/10 text-accent data-[state=active]:bg-accent data-[state=active]:text-white transition-colors">
+                <User className="w-4 h-4" />
+                Assigned Events
+              </TabsTrigger>
+            )}
             {canManageForms && (
               <TabsTrigger value="registrations" className="gap-2">
                 <UserCheck className="w-4 h-4" />
-                Registrations
+                Domain Registrations
               </TabsTrigger>
             )}
             <TabsTrigger value="team" className="gap-2">
@@ -739,6 +762,55 @@ export default function DomainPanel() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Assigned Events Tab */}
+          {assignedEvents && assignedEvents.length > 0 && (
+            <TabsContent value="assigned-events">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-accent" />
+                    Assigned Events
+                  </CardTitle>
+                  <CardDescription>
+                    Events where you are assigned as a coordinator. You can edit the event details and manage registrations here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {assignedEvents.map((event) => (
+                      <div key={event.id} className="flex gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                        {event.image_url && (
+                          <img
+                            src={event.image_url}
+                            alt={event.title}
+                            className="w-24 h-16 object-cover rounded-md flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium truncate">{event.title}</h3>
+                          <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {formatDate(event.date)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleEditEvent(event)}>
+                            Edit Event
+                          </Button>
+                          <Button size="sm" variant="default" onClick={() => setManagingRegistrationsId(event.id)}>
+                            Manage Registrations
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Registrations Tab */}
           {canManageForms && (
@@ -1076,21 +1148,40 @@ export default function DomainPanel() {
           if (!open) setEditingEvent(null);
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingEvent ? "Edit Event" : "Create Event"}
+              {editingEvent ? "Edit Event" : "Create New Event"}
             </DialogTitle>
           </DialogHeader>
           <EventForm
-            event={editingEvent}
+            event={editingEvent || undefined}
             onSuccess={handleEventFormSuccess}
             onCancel={() => {
               setIsEventFormOpen(false);
               setEditingEvent(null);
             }}
-            domainIds={myDomainIds}
+            preselectedDomainIds={
+              selectedDomainId !== "all"
+                ? [selectedDomainId]
+                : myDomainIds
+            }
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Registrations Dialog */}
+      <Dialog open={!!managingRegistrationsId} onOpenChange={(open) => !open && setManagingRegistrationsId(null)}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Registrations</DialogTitle>
+            <DialogDescription>
+              Viewing registrations for {assignedEvents?.find(e => e.id === managingRegistrationsId)?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {managingRegistrationsId && (
+            <EventRegistrations eventId={managingRegistrationsId} />
+          )}
         </DialogContent>
       </Dialog>
     </div>
