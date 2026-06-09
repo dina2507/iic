@@ -21,7 +21,11 @@ const EventDetails = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          *,
+          faculty_coordinator:faculty_members!faculty_coordinator_id(name, designation, phone_number, email),
+          student_coordinator:student_members!student_coordinator_id(name, role, phone_number)
+        `)
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;
@@ -284,6 +288,41 @@ const EventDetails = () => {
                         <p className="font-medium text-foreground">{registrationCount} registered</p>
                       </div>
                     </div>
+
+                    {(event.faculty_coordinator || event.student_coordinator) && (
+                      <div className="pt-4 mt-4 border-t border-border space-y-4">
+                        <h4 className="font-semibold text-foreground text-sm">Event Coordinators</h4>
+                        
+                        {event.faculty_coordinator && (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">{event.faculty_coordinator.name}</span>
+                            <span className="text-xs text-muted-foreground">{event.faculty_coordinator.designation}</span>
+                            {isRegistered && event.faculty_coordinator.phone_number && (
+                              <span className="text-xs text-accent mt-1 flex items-center gap-1">
+                                📞 {event.faculty_coordinator.phone_number}
+                              </span>
+                            )}
+                            {isRegistered && event.faculty_coordinator.email && (
+                              <span className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                ✉️ {event.faculty_coordinator.email}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {event.student_coordinator && (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">{event.student_coordinator.name}</span>
+                            <span className="text-xs text-muted-foreground">{event.student_coordinator.role}</span>
+                            {isRegistered && event.student_coordinator.phone_number && (
+                              <span className="text-xs text-accent mt-1 flex items-center gap-1">
+                                📞 {event.student_coordinator.phone_number}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Registration Button */}

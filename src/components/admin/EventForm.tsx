@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { CoordinatorSelect } from "./CoordinatorSelect";
 
 const eventSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(200, "Title is too long"),
@@ -25,6 +26,8 @@ const eventSchema = z.object({
   is_featured: z.boolean(),
   is_active: z.boolean(),
   display_order: z.number().min(0),
+  faculty_coordinator_id: z.string().optional().nullable(),
+  student_coordinator_id: z.string().optional().nullable(),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -44,6 +47,8 @@ interface EventFormProps {
     is_featured: boolean | null;
     is_active: boolean | null;
     display_order: number | null;
+    faculty_coordinator_id: string | null;
+    student_coordinator_id: string | null;
   };
   onSuccess: () => void;
   onCancel: () => void;
@@ -103,6 +108,8 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
       is_featured: event?.is_featured ?? true,
       is_active: event?.is_active ?? true,
       display_order: event?.display_order ?? 0,
+      faculty_coordinator_id: event?.faculty_coordinator_id || null,
+      student_coordinator_id: event?.student_coordinator_id || null,
     },
   });
 
@@ -176,6 +183,8 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
         is_featured: data.is_featured,
         is_active: data.is_active,
         display_order: data.display_order,
+        faculty_coordinator_id: data.faculty_coordinator_id || null,
+        student_coordinator_id: data.student_coordinator_id || null,
       };
 
       let eventId = event?.id;
@@ -361,6 +370,28 @@ export function EventForm({ event, onSuccess, onCancel, domainIds }: EventFormPr
               );
             })
           )}
+        </div>
+      </div>
+
+      {/* Coordinators */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Faculty Coordinator</Label>
+          <CoordinatorSelect
+            memberType="faculty"
+            value={form.watch("faculty_coordinator_id") || ""}
+            onChange={(val) => form.setValue("faculty_coordinator_id", val || null, { shouldDirty: true })}
+            placeholder="Assign Faculty Coordinator..."
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Student Coordinator</Label>
+          <CoordinatorSelect
+            memberType="student"
+            value={form.watch("student_coordinator_id") || ""}
+            onChange={(val) => form.setValue("student_coordinator_id", val || null, { shouldDirty: true })}
+            placeholder="Assign Student Coordinator..."
+          />
         </div>
       </div>
 

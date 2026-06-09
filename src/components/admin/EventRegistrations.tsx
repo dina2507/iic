@@ -48,10 +48,14 @@ interface Event {
   date: string;
 }
 
-export default function EventRegistrations() {
+interface EventRegistrationsProps {
+  eventId?: string;
+}
+
+export default function EventRegistrations({ eventId }: EventRegistrationsProps = {}) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState<string>("all");
+  const [selectedEvent, setSelectedEvent] = useState<string>(eventId || "all");
 
   // Fetch all events for filter dropdown
   const { data: events } = useQuery({

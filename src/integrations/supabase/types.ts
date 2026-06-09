@@ -141,12 +141,14 @@ export type Database = {
           description: string | null
           display_order: number | null
           eligibility: string | null
+          faculty_coordinator_id: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
           is_featured: boolean | null
           mode: string | null
           registration_link: string | null
+          student_coordinator_id: string | null
           time: string | null
           title: string
           updated_at: string
@@ -159,12 +161,14 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           eligibility?: string | null
+          faculty_coordinator_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
           mode?: string | null
           registration_link?: string | null
+          student_coordinator_id?: string | null
           time?: string | null
           title: string
           updated_at?: string
@@ -177,12 +181,14 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           eligibility?: string | null
+          faculty_coordinator_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
           mode?: string | null
           registration_link?: string | null
+          student_coordinator_id?: string | null
           time?: string | null
           title?: string
           updated_at?: string
@@ -493,6 +499,18 @@ export type Database = {
           _uid: string
         }
         Returns: boolean
+      }
+      search_potential_coordinators: {
+        Args: {
+          search_query: string
+          member_type: string
+        }
+        Returns: {
+          user_id: string
+          name: string
+          designation: string
+          email: string
+        }[]
       }
       upsert_my_member_profile: {
         Args: {

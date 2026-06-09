@@ -37,9 +37,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { MemberProfileForm } from "@/components/member/MemberProfileForm";
+import { EventForm } from "@/components/admin/EventForm";
+import EventRegistrations from "@/components/admin/EventRegistrations";
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name is too long"),
@@ -91,6 +94,8 @@ export default function Dashboard() {
   const { user, loading: authLoading, signOut, isStudentMember } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [managingRegistrationsId, setManagingRegistrationsId] = useState<string | null>(null);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -189,6 +194,22 @@ export default function Dashboard() {
         .order("registered_at", { ascending: false });
       if (error) throw error;
       return data as EventRegistration[];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch assigned events for coordinators
+  const { data: assignedEvents, isLoading: assignedEventsLoading } = useQuery({
+    queryKey: ["assigned-events", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("events")
+        .select('*')
+        .or(`faculty_coordinator_id.eq.${user.id},student_coordinator_id.eq.${user.id}`)
+        .order("date", { ascending: false });
+      if (error) throw error;
+      return data;
     },
     enabled: !!user?.id,
   });
@@ -340,11 +361,17 @@ export default function Dashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="events" className="space-y-6">
-            <TabsList className="grid w-full max-w-xl grid-cols-3">
+            <TabsList className={`grid w-full max-w-2xl ${assignedEvents && assignedEvents.length > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <TabsTrigger value="events" className="gap-2">
                 <Calendar className="w-4 h-4" />
                 My Events
               </TabsTrigger>
+              {assignedEvents && assignedEvents.length > 0 && (
+                <TabsTrigger value="assigned-events" className="gap-2 bg-accent/10 text-accent data-[state=active]:bg-accent data-[state=active]:text-white transition-colors">
+                  <User className="w-4 h-4" />
+                  Assigned Events
+                </TabsTrigger>
+              )}
               <TabsTrigger value="member" className="gap-2">
                 <User className="w-4 h-4" />
                 Member Profile
@@ -498,6 +525,61 @@ export default function Dashboard() {
                 </Card>
               )}
             </TabsContent>
+
+            {/* Assigned Events Tab */}
+            {assignedEvents && assignedEvents.length > 0 && (
+              <TabsContent value="assigned-events" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-accent" />
+                      Assigned Events
+                    </CardTitle>
+                    <CardDescription>
+                      Events where you are assigned as a coordinator. You can edit the event details and manage registrations here.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {assignedEvents.map((event) => (
+                        <div key={event.id} className="flex gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                          {event.image_url && (
+                            <img
+                              src={event.image_url}
+                              alt={event.title}
+                              className="w-24 h-16 object-cover rounded-md"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate">{event.title}</h3>
+                            <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <CalendarDays className="w-3 h-3" />
+                                {formatDate(event.date)}
+                              </span>
+                              {event.time && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {event.time}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setEditingEventId(event.id)}>
+                              Edit Event
+                            </Button>
+                            <Button size="sm" variant="default" onClick={() => setManagingRegistrationsId(event.id)}>
+                              Manage Registrations
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             {/* Profile Tab */}
             <TabsContent value="profile">
@@ -730,6 +812,41 @@ export default function Dashboard() {
           </Tabs>
         </div>
       </main>
+
+      {/* Edit Event Dialog */}
+      <Dialog open={!!editingEventId} onOpenChange={(open) => !open && setEditingEventId(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+          </DialogHeader>
+          {editingEventId && (
+            <EventForm
+              event={assignedEvents?.find(e => e.id === editingEventId)}
+              onSuccess={() => {
+                setEditingEventId(null);
+                queryClient.invalidateQueries({ queryKey: ["assigned-events"] });
+                toast({ title: "Event updated successfully" });
+              }}
+              onCancel={() => setEditingEventId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Registrations Dialog */}
+      <Dialog open={!!managingRegistrationsId} onOpenChange={(open) => !open && setManagingRegistrationsId(null)}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Registrations</DialogTitle>
+            <DialogDescription>
+              Viewing registrations for {assignedEvents?.find(e => e.id === managingRegistrationsId)?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {managingRegistrationsId && (
+            <EventRegistrations eventId={managingRegistrationsId} />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
