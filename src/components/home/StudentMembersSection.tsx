@@ -10,6 +10,8 @@ interface StudentMember {
   name: string;
   role: string;
   domain: string | null;
+  domain_role?: string | null;
+  about?: string | null;
   image_url: string | null;
   linkedin_url: string | null;
   whatsapp_url: string | null;
@@ -37,12 +39,18 @@ export function StudentMembersSection() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("member_directory")
-        .select("id, name, role, domain, image_url, linkedin_url, whatsapp_url, is_core_member")
+        .select("id, name, role, domain, image_url, linkedin_url, whatsapp_url, is_core_member, domain_role, about")
         .eq("member_type", "student")
-        .order("display_order", { ascending: true })
         .limit(6);
       if (error) throw error;
-      return (data ?? []) as StudentMember[];
+      const members = (data ?? []) as StudentMember[];
+      const roleWeight = { head: 1, coordinator: 2, member: 3 };
+      return members.sort((a, b) => {
+        const weightA = roleWeight[(a.domain_role as keyof typeof roleWeight) || "member"] || 3;
+        const weightB = roleWeight[(b.domain_role as keyof typeof roleWeight) || "member"] || 3;
+        if (weightA !== weightB) return weightA - weightB;
+        return a.name.localeCompare(b.name);
+      });
     },
   });
 
@@ -118,6 +126,11 @@ export function StudentMembersSection() {
                         <Badge className={`${getDomainColor(member.domain)} text-white border-0 text-xs`}>
                           {member.domain}
                         </Badge>
+                      )}
+                      {member.about && (
+                        <p className="text-muted-foreground text-sm mt-3 line-clamp-2">
+                          {member.about}
+                        </p>
                       )}
                     </div>
 

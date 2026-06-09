@@ -18,6 +18,8 @@ interface MemberRow {
   domain: string | null;
   is_core_member: boolean | null;
   designation: string | null;
+  domain_role: string | null;
+  about: string | null;
   department: string | null;
   image_url: string | null;
   email: string | null;
@@ -83,7 +85,7 @@ const Members = () => {
       const { data, error } = await supabase
         .from("member_directory")
         .select(
-          "id, member_type, name, role, domain, is_core_member, designation, department, image_url, email, linkedin_url, whatsapp_url, github_url, twitter_url, instagram_url"
+          "id, member_type, name, role, domain, is_core_member, designation, department, image_url, email, linkedin_url, whatsapp_url, github_url, twitter_url, instagram_url, about, domain_role"
         )
         .order("display_order", { ascending: true });
       if (error) throw error;
@@ -99,7 +101,13 @@ const Members = () => {
     m.name.toLowerCase().includes(q) ||
     (m.role?.toLowerCase().includes(q) ?? false) ||
     (m.domain?.toLowerCase().includes(q) ?? false)
-  );
+  ).sort((a, b) => {
+    const roleWeight = { head: 1, coordinator: 2, member: 3 };
+    const weightA = roleWeight[(a.domain_role as keyof typeof roleWeight) || "member"] || 3;
+    const weightB = roleWeight[(b.domain_role as keyof typeof roleWeight) || "member"] || 3;
+    if (weightA !== weightB) return weightA - weightB;
+    return a.name.localeCompare(b.name);
+  });
 
   const filteredFaculty = facultyMembers.filter((m) =>
     m.name.toLowerCase().includes(q) ||
@@ -184,6 +192,11 @@ const Members = () => {
                           <Badge className={`${getDomainColor(member.domain)} text-white border-0 text-xs mt-2`}>
                             {member.domain}
                           </Badge>
+                        )}
+                        {member.about && (
+                          <p className="text-muted-foreground text-sm mt-3 line-clamp-3">
+                            {member.about}
+                          </p>
                         )}
                         <SocialButtons member={member} />
                       </div>

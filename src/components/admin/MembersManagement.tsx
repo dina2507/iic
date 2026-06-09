@@ -9,7 +9,8 @@ import {
   Users,
   Mail,
   Linkedin,
-  Star
+  Star,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,7 +83,14 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
         .select("*")
         .order("display_order", { ascending: true });
       if (error) throw error;
-      return data as StudentMember[];
+      const members = data as StudentMember[];
+      const roleWeight = { head: 1, coordinator: 2, member: 3 };
+      return members.sort((a, b) => {
+        const weightA = roleWeight[(a.domain_role as keyof typeof roleWeight) || "member"] || 3;
+        const weightB = roleWeight[(b.domain_role as keyof typeof roleWeight) || "member"] || 3;
+        if (weightA !== weightB) return weightA - weightB;
+        return a.name.localeCompare(b.name);
+      });
     },
   });
 
@@ -102,6 +110,16 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
       toast({ title: "Error", description: "Failed to delete student member", variant: "destructive" });
     } else {
       toast({ title: "Deleted", description: "Student member has been deleted" });
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+    }
+  };
+
+  const handleApproveStudent = async (id: string) => {
+    const { error } = await supabase.from("student_members").update({ is_active: true }).eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to approve student member", variant: "destructive" });
+    } else {
+      toast({ title: "Approved", description: "Student member has been approved" });
       queryClient.invalidateQueries({ queryKey: ["admin-students"] });
     }
   };
@@ -275,6 +293,17 @@ export default function MembersManagement({ canManageContent }: MembersManagemen
                       </div>
                       {canManageContent && (
                         <div className="flex flex-col gap-1">
+                          {!member.is_active && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleApproveStudent(member.id)}
+                              title="Approve Member"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"

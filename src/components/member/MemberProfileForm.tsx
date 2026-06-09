@@ -304,7 +304,7 @@ export function MemberProfileForm() {
 
       {/* Type-specific fields */}
       {memberType === "student" ? (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-1 gap-4">
           <div className="space-y-2">
             <Label htmlFor="domain">Domain</Label>
             <Select
@@ -323,13 +323,6 @@ export function MemberProfileForm() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="role">Title</Label>
-            <Input id="role" {...form.register("role")} placeholder="e.g., Member, Domain Lead" />
-            <p className="text-xs text-muted-foreground">
-              Your head/coordinator title is assigned by an admin.
-            </p>
           </div>
         </div>
       ) : (

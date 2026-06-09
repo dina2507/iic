@@ -23,7 +23,7 @@ const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"
 
 const studentMemberSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be at most 100 characters"),
-  role: z.string().min(2, "Role must be at least 2 characters").max(100, "Role must be at most 100 characters"),
+  role: z.string().optional(),
   domain: z.string().optional(),
   domain_role: z.enum(["head", "coordinator", "member"], { required_error: "Select a role" }),
   phone_number: z.string().max(20, "Phone number is too long").optional().or(z.literal("")),
@@ -106,7 +106,7 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
       const { data } = await supabase
         .from("domains")
         .select("name")
-        .order("display_order", { ascending: true });
+        .order("name", { ascending: true });
       if (data) setDomainOptions(data.map((d) => d.name));
     };
     fetchDomains();
@@ -150,7 +150,7 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
 
     const payload = {
       name: data.name,
-      role: data.role,
+      role: data.domain_role === "head" ? "Domain Head" : data.domain_role === "coordinator" ? "Domain Coordinator" : "Member",
       domain: data.domain || null,
       domain_role: data.domain_role || "member",
       phone_number: data.phone_number || null,
@@ -226,7 +226,7 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Name *</Label>
           <Input
@@ -235,17 +235,6 @@ export function StudentMemberForm({ member, onSuccess, onCancel }: StudentMember
           />
           {form.formState.errors.name && (
             <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="role">Title *</Label>
-          <Input
-            id="role"
-            {...form.register("role")}
-            placeholder="e.g., President, Domain Lead"
-          />
-          {form.formState.errors.role && (
-            <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
           )}
         </div>
       </div>

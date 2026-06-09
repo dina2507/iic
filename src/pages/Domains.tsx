@@ -64,7 +64,7 @@ export default function Domains() {
       const { data, error } = await supabase
         .from("domains")
         .select("*")
-        .order("display_order", { ascending: true });
+        .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Domain[];
     },
