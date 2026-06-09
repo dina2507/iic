@@ -23,6 +23,7 @@ import {
   UserCog,
   Check,
   X,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -1161,7 +1162,7 @@ export default function DomainPanel() {
               setIsEventFormOpen(false);
               setEditingEvent(null);
             }}
-            preselectedDomainIds={
+            domainIds={
               selectedDomainId !== "all"
                 ? [selectedDomainId]
                 : myDomainIds

@@ -42,16 +42,16 @@ export function CoordinatorSelect({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCoordinators, setSelectedCoordinators] = useState<Coordinator[]>([]);
 
-  const queryKey = memberType === "faculty" ? ["directory-faculty"] : ["directory-students"];
+  const table = memberType === "faculty" ? "faculty_members" : "student_members";
+  const queryKey = memberType === "faculty" ? ["admin-faculty"] : ["admin-students"];
 
-  // Fetch all potential coordinators using React Query and the member_directory view
+  // Fetch all potential coordinators using React Query (shares cache with MembersManagement)
   const { data: coordinators = [], isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("member_directory")
-        .select("id, name, designation, role")
-        .eq("member_type", memberType)
+        .from(table as any)
+        .select("*")
         .order("display_order", { ascending: true });
 
       if (error) {
