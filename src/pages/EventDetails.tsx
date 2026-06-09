@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { Calendar, MapPin, Clock, ArrowLeft, Loader2, CheckCircle, ExternalLink, Users, Globe, Building } from "lucide-react";
+import { Calendar, MapPin, Clock, ArrowLeft, Loader2, CheckCircle, ExternalLink, Users, Globe, Building, CalendarPlus, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { isPastEvent } from "@/lib/date";
+import { downloadEventIcs } from "@/lib/calendar";
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -123,6 +124,20 @@ const EventDetails = () => {
     }
     if (event) {
       registerMutation.mutate({ eventId: event.id, registrationLink: event.registration_link });
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: event?.title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Event link copied to clipboard');
+      }
+    } catch {
+      /* user dismissed the share sheet — ignore */
     }
   };
 
@@ -386,6 +401,24 @@ const EventDetails = () => {
                       )}
                     </div>
                   )}
+
+                  {/* Add to Calendar + Share */}
+                  <div className="flex gap-2 pt-4 border-t border-border">
+                    {!isEventPast && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => downloadEventIcs(event)}
+                      >
+                        <CalendarPlus className="w-4 h-4 mr-2" />
+                        Add to Calendar
+                      </Button>
+                    )}
+                    <Button variant="outline" className="flex-1" onClick={handleShare}>
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
