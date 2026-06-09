@@ -1028,7 +1028,7 @@ export default function DomainPanel() {
                             <Shield className="w-4 h-4" />
                             {domain.name} Team
                           </h3>
-                          <div className="border rounded-lg overflow-hidden">
+                          <div className="border rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow>

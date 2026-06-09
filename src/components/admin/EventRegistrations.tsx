@@ -305,7 +305,7 @@ export default function EventRegistrations({ eventId }: EventRegistrationsProps 
           <p>No registrations found.</p>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

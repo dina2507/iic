@@ -588,7 +588,7 @@ export default function UserManagement() {
             <p className="text-sm mt-1">Use the search above to assign roles to users.</p>
           </div>
         ) : (
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -718,7 +718,7 @@ export default function UserManagement() {
             <p className="text-sm mt-1">Use the search above to assign domain roles to users.</p>
           </div>
         ) : (
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
